@@ -129,6 +129,7 @@ export default class ClimateAccessory {
       .onSet(this.setMotionDetection.bind(this));
 
     this.services['MotionSensor'].addOptionalCharacteristic(this.platform.Characteristic.ConfiguredName);
+    this.services['MotionSensor'].setCharacteristic(this.platform.Characteristic.Name, "Motion Sensor");
     this.services['MotionSensor'].setCharacteristic(this.platform.Characteristic.ConfiguredName, "Motion Sensor");
 
     ////
