@@ -1,0 +1,32 @@
+{
+  "pluginAlias": "Daikin Local Platform",
+  "pluginType": "platform",
+  "singular": true,
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "title": "Plugin Name",
+        "description": "This name will be displayed in the Homebridge log.",
+        "type": "string",
+        "default": "Daikin Local Platform",
+        "placeholder": "Daikin Local Platform",
+        "required": true
+      },
+      "climateIPs": {
+        "type": "array",
+        "description": "The IP addresses of the Daikin climate devices to be controlled.",
+        "items": {
+          "title": "IP Addresses",
+          "type": "string"
+        }
+      },
+      "debugMode": {
+        "title": "Debug Mode",
+        "description": "When enabled, debug messages will be written to the log.",
+        "type": "boolean",
+        "default": false
+      }
+    }
+  }
+}
