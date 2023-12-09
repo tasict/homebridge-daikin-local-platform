@@ -128,12 +128,16 @@ export default class ClimateAccessory {
       .onGet(this.getMotionDetection.bind(this))
       .onSet(this.setMotionDetection.bind(this));
 
+    this.services['MotionSensor'].addOptionalCharacteristic(this.platform.Characteristic.ConfiguredName);
+    this.services['MotionSensor'].setCharacteristic(this.platform.Characteristic.ConfiguredName, "Motion Sensor");
+
     ////
     this.services['HumiditySensor'] = this.accessory.getService(this.platform.Service.HumiditySensor)
     || this.accessory.addService(this.platform.Service.HumiditySensor);
 
     this.services['HumiditySensor'].getCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity)
       .onGet(this.getCurrentRelativeHumidity.bind(this));
+ 
 
     //////////
     // Update characteristic values asynchronously instead of using onGet handlers
