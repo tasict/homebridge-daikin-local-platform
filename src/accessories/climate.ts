@@ -118,19 +118,21 @@ export default class ClimateAccessory {
     .onGet(this.getRotationSpeed.bind(this))
     .onSet(this.setRotationSpeed.bind(this));
 
+    /*
     //
     // Motion sensor switch
     //
-    this.services['MotionSensor'] = this.accessory.getService(this.platform.Service.Switch)
-    || this.accessory.addService(this.platform.Service.Switch);
+    const buttonName = 'Motion Sensor';
+    this.services[buttonName] = this.accessory.getServiceById(this.platform.Service.Switch, buttonName) || this.accessory.addService(this.platform.Service.Switch,  'buttonBuzzerName', buttonName);
 
-    this.services['MotionSensor'].getCharacteristic(this.platform.Characteristic.On)
-      .onGet(this.getMotionDetection.bind(this))
-      .onSet(this.setMotionDetection.bind(this));
+     this.services[buttonName].setCharacteristic(this.platform.Characteristic.Name, buttonName);
+     this.services[buttonName].getCharacteristic(this.platform.Characteristic.On)
+     .onGet(this.getMotionDetection.bind(this))
+     .onSet(this.setMotionDetection.bind(this));
 
-    this.services['MotionSensor'].addOptionalCharacteristic(this.platform.Characteristic.ConfiguredName);
-    this.services['MotionSensor'].setCharacteristic(this.platform.Characteristic.Name, "Motion Sensor");
-    this.services['MotionSensor'].setCharacteristic(this.platform.Characteristic.ConfiguredName, "Motion Sensor");
+     this.services[buttonName].addOptionalCharacteristic(this.platform.Characteristic.ConfiguredName);
+     this.services[buttonName].setCharacteristic(this.platform.Characteristic.ConfiguredName, buttonName);
+    */
 
     ////
     this.services['HumiditySensor'] = this.accessory.getService(this.platform.Service.HumiditySensor)
@@ -138,7 +140,7 @@ export default class ClimateAccessory {
 
     this.services['HumiditySensor'].getCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity)
       .onGet(this.getCurrentRelativeHumidity.bind(this));
- 
+    
 
     //////////
     // Update characteristic values asynchronously instead of using onGet handlers
