@@ -141,7 +141,6 @@ export default class ClimateAccessory {
     this.services['HumiditySensor'].getCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity)
       .onGet(this.getCurrentRelativeHumidity.bind(this));
     
-
     //////////
     // Update characteristic values asynchronously instead of using onGet handlers
     this.refreshDeviceStatus();
@@ -443,7 +442,7 @@ export default class ClimateAccessory {
   
       this.services['HumiditySensor'].updateCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity, this.accessory.context.device.getIndoorHumidity());
       
-      this.services['MotionSensor'].updateCharacteristic(this.platform.Characteristic.On, this.accessory.context.device.getMotionDetection());
+      //this.services['MotionSensor'].updateCharacteristic(this.platform.Characteristic.On, this.accessory.context.device.getMotionDetection());
 
     }catch(e){
         this.platform.log.error(e);
