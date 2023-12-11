@@ -15,7 +15,11 @@ import {
 } from './daikin-local';
 import DaikinPlatformLogger from './logger';
 
+
+
+
 const logger = new DaikinPlatformLogger(undefined, true);
+
 
 const daikinLocalAPI = new DaikinLocalAPI(logger);
 
@@ -36,3 +40,6 @@ function updateDeviceStatus(device: DaikinDevice) {
     logger.info(`Model: '${ device.getDeviceType()}'`);
   });
 }
+
+
+

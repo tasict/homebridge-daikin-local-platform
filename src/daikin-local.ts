@@ -394,7 +394,14 @@ export class DaikinDevice {
       return false;
     }
 
-    const command = [{"pn": "e_3003", "pch": [{"pn": "p_2D", "pv": CLIMATE_OPERATE_SETTING}]}, {"pn": "e_3001","pch": [{"pn": pn, "pv": pv}]}];
+    let command = [{"pn": "e_3003", "pch": [{"pn": "p_2D", "pv": CLIMATE_OPERATE_SETTING}]}, {"pn": "e_3001","pch": [{"pn": pn, "pv": pv}]}];
+
+    if(mode === CLIMATE_MODE_COOLING) {
+      this.pushObject(command, 'e_3001', {"pn": "p_0B", "pv": '0A'});
+      this.pushObject(command, 'e_3001', {"pn": "p_0C", "pv": '01'});    
+    
+    }
+    
     return await this.sendCommand(command);
 
   }
@@ -537,6 +544,31 @@ export class DaikinDevice {
     this.log.debug('Daikin - extractValue(): Error: No value found for path:' + path);
   
     return undefined;
+  }
+
+  // const command = [{"pn": "e_3003", "pch": [{"pn": "p_2D", "pv": CLIMATE_OPERATE_SETTING}]}, {"pn": "e_3001","pch": [{"pn": pn, "pv": speed}]}];
+
+  public pushObject(jsonData: Object, pn: string, obj: object): object | undefined {
+  
+    try{
+ 
+      for(const i in jsonData) {
+        const currentObject = jsonData[i];
+        if (currentObject['pn'] === pn && currentObject.hasOwnProperty('pch')) {
+          currentObject['pch'].push(obj);
+          return jsonData;
+        }
+      }
+      
+
+    }catch (e) {
+      this.log.debug('Daikin - pushObject(): Error:' + e);
+    }
+
+    return undefined;
+
+
+  
   }
 
   protected async sendCommand(command: object): Promise<boolean> {
