@@ -12,6 +12,7 @@ export const CLIMATE_MODE_HEATING = '0100';
 export const CLIMATE_MODE_COOLING = '0200';
 export const CLIMATE_MODE_AUTO = '0300';
 export const CLIMATE_MODE_DEHUMIDIFY = '0500';
+export const CLIMATE_MODE_HUMIDIFY = '0800';
 
 export const CLIMATE_FAN_SPEED_AUTO = '0A00';
 export const CLIMATE_FAN_SPEED_SLIENT = '0B00';
