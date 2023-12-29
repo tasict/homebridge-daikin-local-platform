@@ -12,6 +12,7 @@ export const CLIMATE_MODE_HEATING = '0100';
 export const CLIMATE_MODE_COOLING = '0200';
 export const CLIMATE_MODE_AUTO = '0300';
 export const CLIMATE_MODE_DEHUMIDIFY = '0500';
+export const CLIMATE_MODE_HUMIDIFY = '0800';
 
 export const CLIMATE_FAN_SPEED_AUTO = '0A00';
 export const CLIMATE_FAN_SPEED_SLIENT = '0B00';
@@ -26,7 +27,7 @@ const CLIMATE_OPERATE_OFF = '01';
 const CLIMATE_OPERATE_SETTING = '02';
 
 const COMMAND_QUERY = '{"requests":[{"op":2,"to":"/dsiot/edge.adp_i?filter=pv"},{"op":2,"to":"/dsiot/edge.adp_d?filter=pv"},{"op":2,"to":"/dsiot/edge.adp_f?filter=pv"},{"op":2,"to":"/dsiot/edge.dev_i?filter=pv"},{"op":2,"to":"/dsiot/edge/adr_0100.dgc_status?filter=pv"}]}';
-const COMMAND_QUERY_WITH_MD = '{"requests":[{"op":2,"to":"/dsiot/edge.adp_i?filter=pv"},{"op":2,"to":"/dsiot/edge.adp_d?filter=pv"},{"op":2,"to":"/dsiot/edge.adp_f?filter=pv"},{"op":2,"to":"/dsiot/edge.dev_i?filter=pv"},{"op":2,"to":"/dsiot/edge/adr_0100.dgc_status"}]}';
+const COMMAND_QUERY_WITH_MD = '{"requests":[{"op":2,"to":"/dsiot/edge.adp_i?filter=pv"},{"op":2,"to":"/dsiot/edge.adp_d?filter=pv"},{"op":2,"to":"/dsiot/edge.adp_f?filter=pv"},{"op":2,"to":"/dsiot/edge.dev_i?filter=pv"},{"op":2,"to":"/dsiot/edge/adr_0100.dgc_status"},{"op":2,"to":"/dsiot/edge/adr_0200.dgc_status"}]}';
 
 export class DaikinDevice {
 
