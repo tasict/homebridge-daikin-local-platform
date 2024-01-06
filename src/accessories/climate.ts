@@ -9,6 +9,7 @@ import {
   CLIMATE_MODE_HUMIDIFY,
   CLIMATE_MODE_FAN,
   CLIMATE_MODE_HEATING,
+  CLIMATE_MODE_HUMIDIFY,
   CLIMATE_FAN_SPEED_AUTO,
   CLIMATE_FAN_SPEED_SLIENT,
   CLIMATE_FAN_SPEED_1,
@@ -313,6 +314,17 @@ export default class ClimateAccessory {
               );
               break;
               
+            // Humidifier
+            case CLIMATE_MODE_HUMIDIFY:
+              this.services['Climate'].getCharacteristic(this.platform.Characteristic.CurrentHeaterCoolerState)
+                .updateValue(this.platform.Characteristic.CurrentHeaterCoolerState.IDLE);
+                this.services['Climate'].updateCharacteristic(
+                this.platform.Characteristic.TargetHeaterCoolerState,
+
+                this.platform.Characteristic.TargetHeaterCoolerState.AUTO,
+              );
+              break;
+
             // Humidifier
             case CLIMATE_MODE_HUMIDIFY:
               this.services['Climate'].getCharacteristic(this.platform.Characteristic.CurrentHeaterCoolerState)
