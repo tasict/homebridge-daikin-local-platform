@@ -219,7 +219,7 @@ export default class ClimateAccessory {
         break;
 
       default:
-        this.platform.log.error('Unknown RotationSpeed', value );
+        this.platform.log.error(`Unknown RotationSpeed: ${value}` );
         return;
     }
 
@@ -419,7 +419,7 @@ export default class ClimateAccessory {
         break;
 
       default:
-        this.platform.log.error('Unknown TargetHeaterCoolerState', value );
+        this.platform.log.error(`Unknown TargetHeaterCoolerState ${value}`);
         return;
     }
 
