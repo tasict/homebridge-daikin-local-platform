@@ -195,28 +195,33 @@ export default class ClimateAccessory {
 
     switch (value) {
       case 0:
-        speed = CLIMATE_FAN_SPEED_SLIENT;
+        speed = CLIMATE_FAN_SPEED_AUTO;
         break;
 
       case 1:
-        speed = CLIMATE_FAN_SPEED_1;
+        speed = CLIMATE_FAN_SPEED_SLIENT;
         break;
 
       case 2:
-        speed = CLIMATE_FAN_SPEED_2;
+        speed = CLIMATE_FAN_SPEED_1;
         break;
 
       case 3:
-        speed = CLIMATE_FAN_SPEED_3;
+        speed = CLIMATE_FAN_SPEED_2;
         break;
 
       case 4:
-        speed = CLIMATE_FAN_SPEED_4;
+        speed = CLIMATE_FAN_SPEED_3;
         break;
 
       case 5:
+        speed = CLIMATE_FAN_SPEED_4;
+        break;
+      
+      case 6:
         speed = CLIMATE_FAN_SPEED_5;
         break;
+
 
       default:
         this.platform.log.error(`Unknown RotationSpeed: ${value}` );
