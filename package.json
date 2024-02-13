@@ -41,14 +41,13 @@
     "daikin local"
   ],
   "dependencies": {
-    "axios": "^1.6.5",
-    "cheerio": "^1.0.0-rc.12",
+    "axios": "^1.6.7",
     "tslog": "^4.9.2"
   },
   "devDependencies": {
-    "@types/node": "^20.11.5",
-    "@typescript-eslint/eslint-plugin": "^6.19.1",
-    "@typescript-eslint/parser": "^6.19.1",
+    "@types/node": "^20.11.17",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
     "eslint": "^8.56.0",
     "eslint-plugin-react": "^7.33.2",
     "homebridge": "^1.7.0",
