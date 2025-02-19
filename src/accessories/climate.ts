@@ -193,7 +193,7 @@ export default class ClimateAccessory {
   }
 
   async getFanStatus():Promise<CharacteristicValue> {
-    this.platform.log.info(`Accessory: getFanStatus() for device '${this.accessory.displayName}'`);
+    this.platform.log.debug(`Accessory: getFanStatus() for device '${this.accessory.displayName}'`);
 
     const value = this.accessory.context.device.getFanSpeedNumber();
     this.services['Fan'].updateCharacteristic(this.platform.Characteristic.On, value !== 0);
@@ -201,7 +201,7 @@ export default class ClimateAccessory {
   }
 
   async setFanStatus(value: CharacteristicValue) {
-    this.platform.log.info(`Accessory: setFanStatus() for device '${this.accessory.displayName}'`);
+    this.platform.log.debug(`Accessory: setFanStatus() for device '${this.accessory.displayName}'`);
 
     let speed = this._lastFanSpeed;
     if (value === false) {
