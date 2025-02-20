@@ -118,8 +118,7 @@ export default class ClimateAccessory {
     .onGet(this.getFanStatus.bind(this))
     .onSet(this.setFanStatus.bind(this));
 
-    this.services['Fan']
-    .getCharacteristic(this.platform.Characteristic.RotationSpeed)
+    this.services['Fan'].getCharacteristic(this.platform.Characteristic.RotationSpeed)
     .setProps({
       unit: null,
       format: this.platform.Characteristic.Formats.UINT8,
@@ -178,9 +177,7 @@ export default class ClimateAccessory {
 
   async setClimateActive(value: CharacteristicValue) {
     this.platform.log.debug(`Accessory: setClimateActive() for device '${this.accessory.displayName}'`);
-
-    const active = value === this.platform.Characteristic.Active.ACTIVE;
-    this.accessory.context.device.setPowerStatus(active);
+    this.accessory.context.device.setPowerStatus(value === this.platform.Characteristic.Active.ACTIVE ? true : false);
   }
 
   async getClimateActive():Promise<CharacteristicValue> { 
@@ -195,15 +192,15 @@ export default class ClimateAccessory {
   async getFanStatus():Promise<CharacteristicValue> {
     this.platform.log.debug(`Accessory: getFanStatus() for device '${this.accessory.displayName}'`);
 
-    const value = this.accessory.context.device.getFanSpeedNumber();
-    this.services['Fan'].updateCharacteristic(this.platform.Characteristic.On, value !== 0);
+    const value = this.accessory.context.device.getFanSpeedNumber() !== 0;
+    this.services['Fan'].updateCharacteristic(this.platform.Characteristic.On, value);
     return value;
   }
 
   async setFanStatus(value: CharacteristicValue) {
     this.platform.log.debug(`Accessory: setFanStatus() for device '${this.accessory.displayName}'`);
 
-    let speed = this._lastFanSpeed;
+    let speed = this._lastFanSpeed; // restore to previous non-zero speed
     if (value === false) {
       // turn off fan means turn on auto-speed mode
       speed = 0;
