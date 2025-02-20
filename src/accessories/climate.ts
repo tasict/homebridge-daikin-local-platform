@@ -27,6 +27,7 @@ import {DaikinLocalAPI, DaikinDevice} from '../daikin-local';
 export default class ClimateAccessory {
   private services: Service[] = [];
   private _refreshInterval: NodeJS.Timer | undefined;
+  private _lastFanSpeed = 1; // slient
 
   constructor(
     private readonly platform: DaikinPlatform,
@@ -109,12 +110,21 @@ export default class ClimateAccessory {
     .onSet(this.setHeatingThresholdTemperature.bind(this))
     .onGet(this.getHeatingThresholdTemperature.bind(this));
 
-    this.services['Climate']
-    .getCharacteristic(this.platform.Characteristic.RotationSpeed)
+    // Fan control service
+    this.services['Fan'] = this.accessory.getService(this.platform.Service.Fan)
+      || this.accessory.addService(this.platform.Service.Fan);
+
+    this.services['Fan'].getCharacteristic(this.platform.Characteristic.On)
+    .onGet(this.getFanStatus.bind(this))
+    .onSet(this.setFanStatus.bind(this));
+
+    this.services['Fan'].getCharacteristic(this.platform.Characteristic.RotationSpeed)
     .setProps({
-      minValue: 0,
+      unit: null,
+      format: this.platform.Characteristic.Formats.UINT8,
+      minValue: 1,
       maxValue: 6,
-      minStep: 1,
+      validValues: [1, 2, 3, 4, 5, 6] 
     })
     .onGet(this.getRotationSpeed.bind(this))
     .onSet(this.setRotationSpeed.bind(this));
@@ -168,23 +178,46 @@ export default class ClimateAccessory {
   async setClimateActive(value: CharacteristicValue) {
     this.platform.log.debug(`Accessory: setClimateActive() for device '${this.accessory.displayName}'`);
     this.accessory.context.device.setPowerStatus(value === this.platform.Characteristic.Active.ACTIVE ? true : false);
-    this.services['Climate'].updateCharacteristic(this.platform.Characteristic.Active, value);  
   }
 
   async getClimateActive():Promise<CharacteristicValue> { 
-    
     this.platform.log.debug(`Accessory: getClimateActive() for device '${this.accessory.displayName}'`);
 
-    const active = this.accessory.context.device.getPowerStatus() ? this.platform.Characteristic.Active.ACTIVE
-    : this.platform.Characteristic.Active.INACTIVE;
+    const active = this.accessory.context.device.getPowerStatus() ?
+      this.platform.Characteristic.Active.ACTIVE : this.platform.Characteristic.Active.INACTIVE;
+    this.services['Climate'].updateCharacteristic(this.platform.Characteristic.Active, active);
     return active;
+  }
+
+  async getFanStatus():Promise<CharacteristicValue> {
+    this.platform.log.debug(`Accessory: getFanStatus() for device '${this.accessory.displayName}'`);
+
+    const value = this.accessory.context.device.getFanSpeedNumber() !== 0;
+    this.services['Fan'].updateCharacteristic(this.platform.Characteristic.On, value);
+    return value;
+  }
+
+  async setFanStatus(value: CharacteristicValue) {
+    this.platform.log.debug(`Accessory: setFanStatus() for device '${this.accessory.displayName}'`);
+
+    let speed = this._lastFanSpeed; // restore to previous non-zero speed
+    if (value === false) {
+      // turn off fan means turn on auto-speed mode
+      speed = 0;
+    }
+    this.setRotationSpeed(speed);
   }
 
   async getRotationSpeed():Promise<CharacteristicValue> {
       
-      this.platform.log.debug(`Accessory: getRotationSpeed() for device '${this.accessory.displayName}'`);
-   
-      return this.accessory.context.device.getFanSpeedNumber();
+    this.platform.log.debug(`Accessory: getRotationSpeed() for device '${this.accessory.displayName}'`);
+
+    let value = this.accessory.context.device.getFanSpeedNumber();
+    if (value === 0) {
+      value = this._lastFanSpeed;
+    }
+    this.services['Fan'].updateCharacteristic(this.platform.Characteristic.RotationSpeed, value);
+    return value;
   }
 
   async setRotationSpeed(value: CharacteristicValue) {
@@ -195,6 +228,10 @@ export default class ClimateAccessory {
 
     switch (value) {
       case 0:
+        const lastFanSpeed = this.accessory.context.device.getFanSpeedNumber();
+        if (lastFanSpeed !== 0) {
+          this._lastFanSpeed = lastFanSpeed;
+        }
         speed = CLIMATE_FAN_SPEED_AUTO;
         break;
 
@@ -368,14 +405,18 @@ export default class ClimateAccessory {
       
       this.platform.log.debug(`Accessory: getCoolingThresholdTemperature() for device '${this.accessory.displayName}'`);
   
-      return this.accessory.context.device.getTargetTemperatureWithMode(CLIMATE_MODE_COOLING);
+      const value = this.accessory.context.device.getTargetTemperatureWithMode(CLIMATE_MODE_COOLING);
+      this.services['Climate'].updateCharacteristic(this.platform.Characteristic.CoolingThresholdTemperature, value);
+      return value;
   }
 
   async getHeatingThresholdTemperature():Promise<CharacteristicValue> {
       
       this.platform.log.debug(`Accessory: getHeatingThresholdTemperature() for device '${this.accessory.displayName}'`);
   
-      return this.accessory.context.device.getTargetTemperatureWithMode(CLIMATE_MODE_HEATING);
+      const value = this.accessory.context.device.getTargetTemperatureWithMode(CLIMATE_MODE_HEATING);
+      this.services['Climate'].updateCharacteristic(this.platform.Characteristic.HeatingThresholdTemperature, value);
+      return value;
   }
 
   async setCoolingThresholdTemperature(value: CharacteristicValue) {
@@ -386,9 +427,6 @@ export default class ClimateAccessory {
 
     this.accessory.context.device.setOperationMode(CLIMATE_MODE_COOLING);
     this.accessory.context.device.setTargetTemperature(threshold);
-
-    this.services['Climate'].getCharacteristic(this.platform.Characteristic.HeatingThresholdTemperature)
-      .updateValue(value);
   }
 
   async setHeatingThresholdTemperature(value: CharacteristicValue) {
@@ -399,9 +437,6 @@ export default class ClimateAccessory {
 
     this.accessory.context.device.setOperationMode(CLIMATE_MODE_HEATING);
     this.accessory.context.device.setTargetTemperature(threshold);
-
-    this.services['Climate'].getCharacteristic(this.platform.Characteristic.HeatingThresholdTemperature)
-      .updateValue(value);
   }
 
   async setTargetHeaterCoolerState(value: CharacteristicValue) {
@@ -430,9 +465,6 @@ export default class ClimateAccessory {
 
 
     this.accessory.context.device.setOperationMode(mode);
-
-    this.services['Climate'].getCharacteristic(this.platform.Characteristic.TargetHeaterCoolerState)
-      .updateValue(value);
   }
 
   async getMotionDetection():Promise<CharacteristicValue> {

@@ -1,5 +1,6 @@
 import DaikinPlatformLogger from './logger';
 import axios from 'axios';
+import rateLimit from 'axios-rate-limit';
 
 import {
   USER_AGENT,
@@ -29,6 +30,8 @@ const CLIMATE_OPERATE_SETTING = '02';
 const COMMAND_QUERY = '{"requests":[{"op":2,"to":"/dsiot/edge.adp_i?filter=pv"},{"op":2,"to":"/dsiot/edge.adp_d?filter=pv"},{"op":2,"to":"/dsiot/edge.adp_f?filter=pv"},{"op":2,"to":"/dsiot/edge.dev_i?filter=pv"},{"op":2,"to":"/dsiot/edge/adr_0100.dgc_status?filter=pv"}]}';
 const COMMAND_QUERY_WITH_MD = '{"requests":[{"op":2,"to":"/dsiot/edge.adp_i?filter=pv"},{"op":2,"to":"/dsiot/edge.adp_d?filter=pv"},{"op":2,"to":"/dsiot/edge.adp_f?filter=pv"},{"op":2,"to":"/dsiot/edge.dev_i?filter=pv"},{"op":2,"to":"/dsiot/edge/adr_0100.dgc_status"},{"op":2,"to":"/dsiot/edge/adr_0200.dgc_status"}]}';
 
+const http = rateLimit(axios.create(), { maxRequests: 1, perMilliseconds: 500 });
+
 export class DaikinDevice {
 
   protected _IP: string;
@@ -57,7 +60,7 @@ export class DaikinDevice {
       return this._Response;
     }
   
-    const response = await axios.request({
+    const response = await http.request({
       method: 'post',
       url: `http://${this._IP}${ENDPOINT}`,
       headers: {
@@ -102,7 +105,7 @@ export class DaikinDevice {
     this.log.debug(`Daikin - setShowSSID(${bShow}): Name: ${this.getDeviceName()}`);
     const command = {"requests":[{"op":3,"to":"/dsiot/edge.adp_d","pc":{"pn":"adp_d","pch":[{"pn":"disp_ssid","pv": bShow ? 0 :1 }]}}]};
 
-    const response = await axios.request({
+    const response = await http.request({
       method: 'post',
       url: `http://${this._IP}${ENDPOINT}`,
       headers: {
@@ -576,7 +579,7 @@ export class DaikinDevice {
 
     const param = {"requests": [{"op": 3,"to": "/dsiot/edge/adr_0100.dgc_status","pc": {"pn": "dgc_status","pch": [{"pn": "e_1002","pch": command}]}}]};
     
-    const response = await axios.request({
+    const response = await http.request({
       method: 'post',
       url: `http://${this._IP}${ENDPOINT}`,
       headers: {
