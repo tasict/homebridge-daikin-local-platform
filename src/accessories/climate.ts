@@ -122,9 +122,9 @@ export default class ClimateAccessory {
     .setProps({
       unit: null,
       format: this.platform.Characteristic.Formats.UINT8,
-      minValue: 1,
+      minValue: 0,
       maxValue: 6,
-      validValues: [1, 2, 3, 4, 5, 6] 
+      validValues: [0, 1, 2, 3, 4, 5, 6]
     })
     .onGet(this.getRotationSpeed.bind(this))
     .onSet(this.setRotationSpeed.bind(this));
