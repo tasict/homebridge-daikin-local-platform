@@ -59,27 +59,34 @@ export class DaikinDevice {
       this.log.debug(`Daikin - queryDevice('${this._IP}'): Skipping query as last update was less than ${SECONDS_BETWEEN_REQUEST} micro seconds ago`);
       return this._Response;
     }
+
+    try{
+
+      const response = await http.request({
+        method: 'post',
+        url: `http://${this._IP}${ENDPOINT}`,
+        headers: {
+          'Accept': 'application/json; charset=UTF-8',
+          'Content-Type': 'application/json',
+          'User-Agent': USER_AGENT,
+        },
+        data: COMMAND_QUERY_WITH_MD,
+      });
   
-    const response = await http.request({
-      method: 'post',
-      url: `http://${this._IP}${ENDPOINT}`,
-      headers: {
-        'Accept': 'application/json; charset=UTF-8',
-        'Content-Type': 'application/json',
-        'User-Agent': USER_AGENT,
-      },
-      data: COMMAND_QUERY_WITH_MD,
-    });
+      this._lastUpdateTimestamp = Date.now();
+  
+      if(response.status === 200) {
+        //this.log.debug(`Daikin - queryDevice('${this._IP}'): Response: '${JSON.stringify(response.data)}'`);
+        return response.data;
+      }
+  
+      this.log.debug(`Daikin - queryDevice('${this._IP}'): Error: Invalid response status code: '${response.status}'`);
 
-    this._lastUpdateTimestamp = Date.now();
-
-    if(response.status === 200) {
-      //this.log.debug(`Daikin - queryDevice('${this._IP}'): Response: '${JSON.stringify(response.data)}'`);
-      return response.data;
     }
-
-    this.log.debug(`Daikin - queryDevice('${this._IP}'): Error: Invalid response status code: '${response.status}'`);
-
+    catch(e) {
+      this.log.debug(`Daikin - queryDevice('${this._IP}'): Error: '${e}'`);
+    }
+  
     return undefined;
   
   
@@ -105,18 +112,26 @@ export class DaikinDevice {
     this.log.debug(`Daikin - setShowSSID(${bShow}): Name: ${this.getDeviceName()}`);
     const command = {"requests":[{"op":3,"to":"/dsiot/edge.adp_d","pc":{"pn":"adp_d","pch":[{"pn":"disp_ssid","pv": bShow ? 0 :1 }]}}]};
 
-    const response = await http.request({
-      method: 'post',
-      url: `http://${this._IP}${ENDPOINT}`,
-      headers: {
-        'Accept': 'application/json; charset=UTF-8',
-        'Content-Type': 'application/json',
-        'User-Agent': USER_AGENT,
-      },
-      data: JSON.stringify(command),
-    });
+    try{
 
-    return response.status === 200;
+      const response = await http.request({
+        method: 'post',
+        url: `http://${this._IP}${ENDPOINT}`,
+        headers: {
+          'Accept': 'application/json; charset=UTF-8',
+          'Content-Type': 'application/json',
+          'User-Agent': USER_AGENT,
+        },
+        data: JSON.stringify(command),
+      });
+  
+      return response.status === 200;
+
+    }catch(e) {
+      this.log.debug(`Daikin - setShowSSID('${this._IP}'): Error: '${e}'`);
+    }
+
+    return false;
 
   }
 
@@ -579,28 +594,39 @@ export class DaikinDevice {
 
     const param = {"requests": [{"op": 3,"to": "/dsiot/edge/adr_0100.dgc_status","pc": {"pn": "dgc_status","pch": [{"pn": "e_1002","pch": command}]}}]};
     
-    const response = await http.request({
-      method: 'post',
-      url: `http://${this._IP}${ENDPOINT}`,
-      headers: {
-        'Accept': 'application/json; charset=UTF-8',
-        'Content-Type': 'application/json',
-        'User-Agent': USER_AGENT,
-      },
-      data: JSON.stringify(param),
-    });
+    try{
 
-
-    if(response.status === 200) {
-      this.log.debug(`Daikin - sendCommand('${this._IP}'):  '${JSON.stringify(param)} ' : Response: '${JSON.stringify(response.data)}'`);
+      const response = await http.request({
+        method: 'post',
+        url: `http://${this._IP}${ENDPOINT}`,
+        headers: {
+          'Accept': 'application/json; charset=UTF-8',
+          'Content-Type': 'application/json',
+          'User-Agent': USER_AGENT,
+        },
+        data: JSON.stringify(param),
+      });
+  
+  
+      if(response.status === 200) {
+        this.log.debug(`Daikin - sendCommand('${this._IP}'):  '${JSON.stringify(param)} ' : Response: '${JSON.stringify(response.data)}'`);
+      }
+      else{
+        this.log.debug(`Daikin - sendCommand('${this._IP}'): '${JSON.stringify(param)} ' : Error: Invalid response status code: '${response.status}'`);
+      }
+  
+      await this.fetchDeviceStatus(true);
+  
+      return response.status === 200;
+      
     }
-    else{
-      this.log.debug(`Daikin - sendCommand('${this._IP}'): '${JSON.stringify(param)} ' : Error: Invalid response status code: '${response.status}'`);
+    catch(e) {
+      this.log.debug(`Daikin - sendCommand('${this._IP}'): Error: '${e}'`);
     }
 
-    await this.fetchDeviceStatus(true);
+    return false;
 
-    return response.status === 200;
+
   }
 
 }
