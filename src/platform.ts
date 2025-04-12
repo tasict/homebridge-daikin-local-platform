@@ -83,43 +83,55 @@ export default class DaikinPlatform implements DynamicPlatformPlugin {
     await this.daikinLocalAPI.fetchDevices(this.platformConfig.climateIPs).then((devices) => {
 
       for(let i = 0; i < devices.length; i++) {
-        const uuid = this.api.hap.uuid.generate(devices[i].getMacAddress());
-        const existingAccessory = this.accessories.find(accessory => accessory.UUID === uuid);
 
-        this.DaikinDevices[devices[i].getMacAddress()] = devices[i];
+        try {
 
-        if (existingAccessory !== undefined) {
-          // The accessory already exists
-          this.log.info(`Restoring accessory '${existingAccessory.displayName}' `
-            + `(${devices[i].getMacAddress()}) from cache.`);
 
-          // If you need to update the accessory.context then you should run
-          // `api.updatePlatformAccessories`. eg.:
-          existingAccessory.context.device = devices[i];
-          this.api.updatePlatformAccessories([existingAccessory]);
+          if(!devices[i].getMacAddress()) {
+            this.log.error(`Device ${devices[i].getDeviceName()} has no MAC address - skipping.`);
+            continue;
+          }
 
-          // Create the accessory handler for the restored accessory
-          this.createDaikinAccessory(devices[i], this, existingAccessory);
-
-        } else {
-          this.log.info(`Adding accessory '${devices[i].getDeviceName()}' (${devices[i].getMacAddress()}).`);
-          // The accessory does not yet exist, so we need to create it
-          const accessory = new this.api.platformAccessory<DaikinAccessoryContext>(
-            devices[i].getDeviceName(), uuid);
-
-          // Store a copy of the device object in the `accessory.context` property,
-          // which can be used to store any data about the accessory you may need.
-          accessory.context.device = devices[i];
-
-          // Create the accessory handler for the newly create accessory
-          // this is imported from `platformAccessory.ts`
-          this.createDaikinAccessory(devices[i], this, accessory);
-
-          // Link the accessory to your platform
-          this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+          const uuid = this.api.hap.uuid.generate(devices[i].getMacAddress());
+          const existingAccessory = this.accessories.find(accessory => accessory.UUID === uuid);
+  
+          this.DaikinDevices[devices[i].getMacAddress()] = devices[i];
+  
+          if (existingAccessory !== undefined) {
+            // The accessory already exists
+            this.log.info(`Restoring accessory '${existingAccessory.displayName}' `
+              + `(${devices[i].getMacAddress()}) from cache.`);
+  
+            // If you need to update the accessory.context then you should run
+            // `api.updatePlatformAccessories`. eg.:
+            existingAccessory.context.device = devices[i];
+            this.api.updatePlatformAccessories([existingAccessory]);
+  
+            // Create the accessory handler for the restored accessory
+            this.createDaikinAccessory(devices[i], this, existingAccessory);
+  
+          } else {
+            this.log.info(`Adding accessory '${devices[i].getDeviceName()}' (${devices[i].getMacAddress()}).`);
+            // The accessory does not yet exist, so we need to create it
+            const accessory = new this.api.platformAccessory<DaikinAccessoryContext>(
+              devices[i].getDeviceName(), uuid);
+  
+            // Store a copy of the device object in the `accessory.context` property,
+            // which can be used to store any data about the accessory you may need.
+            accessory.context.device = devices[i];
+  
+            // Create the accessory handler for the newly create accessory
+            // this is imported from `platformAccessory.ts`
+            this.createDaikinAccessory(devices[i], this, accessory);
+  
+            // Link the accessory to your platform
+            this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+          }
         }
-
-
+        catch (e) {
+          this.log.error(`Error setting logger for device ${devices[i].getDeviceName()}: ${e}`);
+          continue;
+        }
 
       }
     
@@ -128,16 +140,26 @@ export default class DaikinPlatform implements DynamicPlatformPlugin {
     for (const cachedAccessory of this.accessories) {
 
       if (cachedAccessory.context.device) {
-        const guid = cachedAccessory.context.device.getMacAddress();
-        const daikinDevice = this.DaikinDevices[guid];
 
-        if (daikinDevice === undefined) {
+        try{
 
-          this.log.info(`Removing accessory '${cachedAccessory.displayName}' (${guid}) `
-            + 'because it does not exist on the config.');
+          const guid = cachedAccessory.context.device.getMacAddress();
+          const daikinDevice = this.DaikinDevices[guid];
+  
+          if (daikinDevice === undefined) {
+  
+            this.log.info(`Removing accessory '${cachedAccessory.displayName}' (${guid}) `
+              + 'because it does not exist on the config.');
+  
+            this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [cachedAccessory]);
+          }
 
-          this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [cachedAccessory]);
+        }catch (e) {
+          this.log.error(`Error setting logger for device ${cachedAccessory.displayName}: ${e}`);
+          continue;
         }
+
+
       }
     }
 
