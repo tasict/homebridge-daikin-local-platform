@@ -77,7 +77,7 @@ export class DaikinDevice {
   
       if(response.status === 200) {
         //this.log.debug(`Daikin - queryDevice('${this._IP}'): Response: '${JSON.stringify(response.data)}'`);
-        this._Response = response;
+        this._Response = response.data;
         return response.data;
       }
   
@@ -105,7 +105,7 @@ export class DaikinDevice {
 
     if(!this.getMacAddress()){
       this.log.error(`Daikin - fetchDeviceStatus(${bForce}): Error: ${this._IP} no MAC address found`);
-      this.log.debug(`Daikin - fetchDeviceStatus(${bForce}): Response: '${JSON.stringify(this._Response)}'`);
+      this.log.debug(`Daikin - fetchDeviceStatus(${bForce}): Response: '${this._Response}'`);
       return false;
     }
 
@@ -469,7 +469,7 @@ export class DaikinDevice {
     try {
 
       if(responsesData === undefined || responsesData.hasOwnProperty('responses') === false) {
-        this.log.debug('Daikin - extractValue(): Error: No responses object found');
+        this.log.debug(`Daikin - extractValue(${Object}, ${fr}, ${path}): Error: No responses object found`);
         return undefined;
       }
 
