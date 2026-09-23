@@ -62,6 +62,12 @@
   .dlp-pairing { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
   .dlp-qr { width: 132px; height: 132px; background: #fff; border-radius: 6px; padding: 4px; flex-shrink: 0; }
   .dlp-qr svg { width: 100%; height: 100%; display: block; }
+  .dlp-proto { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .dlp-proto label { flex: 1 1 220px; display: flex; gap: 8px; align-items: flex-start; border: 1px solid #dee2e6; border-radius: 8px; padding: 9px 11px; cursor: pointer; margin: 0; }
+  .dlp-proto label.dlp-picked { border-color: #0d6efd; box-shadow: 0 0 0 1px #0d6efd; }
+  body.dark-mode .dlp-proto label { border-color: #3e4144; }
+  body.dark-mode .dlp-proto label.dlp-picked { border-color: #6ea8fe; box-shadow: 0 0 0 1px #6ea8fe; }
+  .dlp-proto input { margin-top: 3px; }
   .dlp-code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 16px; font-weight: 600; letter-spacing: 0.05em; }
 </style>
 
@@ -88,17 +94,16 @@
       <button type="button" id="dlpDeviceAdd" class="btn btn-outline-secondary btn-sm">Add manually</button>
       <span id="dlpScanStatus" class="text-muted small" style="margin-left: 12px;" aria-live="polite"></span>
     </div>
+    <div id="dlpProtocolChoice"></div>
     <div id="dlpDeviceRows"></div>
   </div>
 </div>
 
-<!-- 2. Matter: moving units from HomeKit to Matter in bulk (with a
-     side-by-side migration phase), and the pairing code of the bridge this
-     plugin runs on (the units are bridged accessories, so there is one code
-     for all of them). Like
-     every Matter control on this page, shown only when Matter is on for that
-     bridge — it is switched on in the Homebridge bridge settings. -->
-<div class="card mb-3" id="dlpMatterCard" style="display: none;">
+<!-- 2. Matter: the bridge's Matter state, moving units from HomeKit to
+     Matter in bulk (with a side-by-side migration phase), and the pairing
+     code of the bridge this plugin runs on (the units are bridged
+     accessories, so there is one code for all of them). -->
+<div class="card mb-3" id="dlpMatterCard">
   <div class="card-body py-2">
     <strong>Matter</strong>
     <p class="text-muted small mt-1 mb-2">
@@ -108,6 +113,7 @@
       in two steps: while migrating, each unit is in the Home app twice &mdash;
       the HomeKit accessory keeps working while you set up the Matter one.
     </p>
+    <div id="dlpMatterBridge"></div>
     <div id="dlpMatterMigration"></div>
     <div id="dlpMatterPairing"></div>
   </div>
@@ -195,7 +201,8 @@
   let orphanMatter = [];            // climateMatter entries matching no device
   let orphanMatterMigration = [];   // climateMatterMigration entries matching no device
   let matterInfo = { mainBridgeMatterEnabled: false, pairing: null };
-  let matterOn = false;             // Matter is on for the bridge this plugin runs on
+  let childBridge = null;           // the config's _bridge block (child-bridge mode), if any
+  let initialProtocol = 'hap';      // first-setup choice, used while no unit is configured
   let nameValue = defaultName;
   let debugValue = false;
   let languageValue = 'en';         // resolved at init: config value, else the Homebridge UI language
@@ -210,6 +217,16 @@
   // as in the platform.
   const MATTER_CHOICES = [['hap', 'HomeKit'], ['migrate', 'HomeKit + Matter (migrating)'], ['matter', 'Matter']];
   const matterChoice = (row) => (row.matterMigration ? 'migrate' : row.matter ? 'matter' : 'hap');
+  const configuredRows = () => deviceRows.filter((row) => row.value.trim() !== '');
+  // Protocol for a unit added now: the first-setup choice while nothing is
+  // configured, then Matter only if every configured unit is on Matter.
+  const newRowProtocol = () => {
+    const rows = configuredRows();
+    if (rows.length === 0) {
+      return initialProtocol;
+    }
+    return rows.every((row) => matterChoice(row) === 'matter') ? 'matter' : 'hap';
+  };
   const setMatterChoice = (row, choice) => {
     delete row.matter;
     delete row.matterMigration;
@@ -364,6 +381,27 @@
       delete config.climateMatterMigration;
     }
 
+    // Child bridge: Homebridge 2.4 switches HAP and Matter per bridge, so
+    // follow the units — Matter on while any unit uses it, HAP off once
+    // every unit is Matter only (one pairing code instead of two). Other
+    // keys of both blocks are kept; switching off never clears a pairing.
+    if (config._bridge && typeof config._bridge === 'object') {
+      const choices = configuredRows().map(matterChoice);
+      if (choices.length === 0) {
+        choices.push(initialProtocol);
+      }
+      const needMatter = choices.some((choice) => choice !== 'hap');
+      const needHap = choices.some((choice) => choice !== 'matter');
+      const block = (value) => (value && typeof value === 'object' ? value : {});
+      if (needMatter || config._bridge.matter !== undefined) {
+        config._bridge.matter = { ...block(config._bridge.matter), enabled: needMatter };
+      }
+      if (!needHap || config._bridge.hap !== undefined) {
+        config._bridge.hap = { ...block(config._bridge.hap), enabled: needHap };
+      }
+      childBridge = config._bridge;
+    }
+
     await homebridge.updatePluginConfig(pluginConfig);
   }
 
@@ -496,7 +534,7 @@
       chip.appendChild(document.createTextNode('swing'));
       title.appendChild(chip);
     }
-    if (opts.matter && opts.matter !== 'hap' && matterOn) {
+    if (opts.matter && opts.matter !== 'hap') {
       const chip = document.createElement('span');
       chip.className = 'dlp-chip';
       chip.innerHTML = ICONS.matter;
@@ -839,8 +877,8 @@
     swing.opt.appendChild(swingSwitch.label);
     options.appendChild(swing.opt);
 
-    // Matter (only while the bridge has Matter on)
-    if (matterOn) {
+    // Matter
+    {
       const matter = optionRow('Matter (Beta)',
         'Publish this unit over Matter, so the Apple Home app (iOS 27+) can show '
         + 'its electricity use. It works the same as in HomeKit, with the fan, '
@@ -871,8 +909,58 @@
     return { form, ipInput, keyInput };
   }
 
+  // First setup: how the plugin connects to Apple Home. Shown until a unit
+  // is configured; afterwards each unit has its own choice in its options.
+  function renderProtocolChoice() {
+    const host = document.getElementById('dlpProtocolChoice');
+    host.innerHTML = '';
+    if (configuredRows().length > 0) {
+      return;
+    }
+    const title = document.createElement('div');
+    title.className = 'dlp-field-label';
+    title.style.marginBottom = '6px';
+    title.textContent = 'Connect to Apple Home with';
+    host.appendChild(title);
+    const box = document.createElement('div');
+    box.className = 'dlp-proto';
+    box.setAttribute('role', 'radiogroup');
+    [
+      ['hap', 'HomeKit (HAP)', 'The classic way: pair the Homebridge bridge in the Home app. Every feature, on any iOS version.'],
+      ['matter', 'Matter (Beta)', 'Pair the bridge\'s Matter code instead. Same controls, and the Home app (iOS 27+) '
+        + 'also shows the units\' electricity use in its Energy view.'],
+    ].forEach(([value, label, desc]) => {
+      const option = document.createElement('label');
+      option.className = initialProtocol === value ? 'dlp-picked' : '';
+      const input = document.createElement('input');
+      input.type = 'radio';
+      input.name = 'dlpProtocol';
+      input.value = value;
+      input.checked = initialProtocol === value;
+      input.addEventListener('change', () => {
+        initialProtocol = value;
+        renderDevices();
+        sync();
+      });
+      const text = document.createElement('div');
+      const strong = document.createElement('div');
+      strong.className = 'dlp-opt-title';
+      strong.textContent = label;
+      const small = document.createElement('div');
+      small.className = 'dlp-opt-desc';
+      small.textContent = desc;
+      text.appendChild(strong);
+      text.appendChild(small);
+      option.appendChild(input);
+      option.appendChild(text);
+      box.appendChild(option);
+    });
+    host.appendChild(box);
+  }
+
   function renderDevices() {
     deviceRowsHost.innerHTML = '';
+    renderProtocolChoice();
 
     let pendingFocus = null;
 
@@ -979,7 +1067,9 @@
 
       const addButton = iconButton('add', 'btn-outline-success', 'Add as device (keeps the key)');
       addButton.addEventListener('click', () => {
-        deviceRows.push({ value: orphan.ip, key: orphan.key });
+        const row = { value: orphan.ip, key: orphan.key };
+        setMatterChoice(row, newRowProtocol());
+        deviceRows.push(row);
         orphanKeys.splice(index, 1);
         renderDevices();
         sync();
@@ -1019,6 +1109,7 @@
     }
 
     const row = { value: device.ip };
+    setMatterChoice(row, newRowProtocol());
     adoptOrphanKey(row);
     adoptOrphanFlags(row);
     deviceRows.push(row);
@@ -1040,7 +1131,9 @@
   }
 
   deviceAddButton.addEventListener('click', () => {
-    deviceRows.push({ value: '', editing: true, focus: true, orig: { value: '' } });
+    const row = { value: '', editing: true, focus: true, orig: { value: '' } };
+    setMatterChoice(row, newRowProtocol());
+    deviceRows.push(row);
     renderDevices();
   });
 
@@ -1078,59 +1171,82 @@
   const matterPairingHost = document.getElementById('dlpMatterPairing');
 
   const matterMigrationHost = document.getElementById('dlpMatterMigration');
-
-  // Same rule as Homebridge's isMatterConfigEnabled.
-  const matterFlagEnabled = (value) => Boolean(value) && value.enabled !== false;
+  const matterBridgeHost = document.getElementById('dlpMatterBridge');
 
   function renderMatter() {
-    matterCard.style.display = matterOn ? '' : 'none';
     matterMigrationHost.innerHTML = '';
     matterPairingHost.innerHTML = '';
+    matterBridgeHost.innerHTML = '';
+
+    // The bridge side: a child bridge follows the units (see sync()); the
+    // main bridge is Homebridge's own setting, which this page cannot change.
+    const wantsMatter = configuredRows().some((row) => matterChoice(row) !== 'hap')
+      || (configuredRows().length === 0 && initialProtocol === 'matter');
+    const bridgeNote = document.createElement('div');
+    bridgeNote.className = 'small mb-2';
+    if (childBridge) {
+      bridgeNote.textContent = 'This plugin runs as a child bridge: Matter (and HomeKit) are switched on for it '
+        + 'automatically to match the units. Save and restart Homebridge after changing a unit.';
+    } else if (wantsMatter && !matterInfo.mainBridgeMatterEnabled) {
+      bridgeNote.className = 'dlp-invalid-hint mb-2';
+      bridgeNote.textContent = 'Matter is off on the main Homebridge bridge, so units set to Matter stay on '
+        + 'HomeKit. Turn Matter on in the Homebridge settings, or run this plugin as a child bridge.';
+    } else {
+      bridgeNote.textContent = matterInfo.mainBridgeMatterEnabled
+        ? 'Matter is on for the main Homebridge bridge this plugin runs on.'
+        : 'Units stay on HomeKit until you switch them to Matter.';
+    }
+    matterBridgeHost.appendChild(bridgeNote);
 
     // Bulk migration: every HomeKit unit to "HomeKit + Matter", then every
     // migrating unit on to Matter only.
     const configured = deviceRows.filter((row) => row.value.trim() !== '');
     const hapRows = configured.filter((row) => matterChoice(row) === 'hap');
     const migratingRows = configured.filter((row) => matterChoice(row) === 'migrate');
-    const steps = document.createElement('ol');
-    steps.className = 'small mb-2';
-    steps.style.paddingLeft = '1.3em';
-    [
-      'Start the migration and restart Homebridge.',
-      'Add the Matter bridge in the Home app with the code below (once), then give each Matter '
-        + 'accessory its room and rebuild the scenes and automations that use the unit.',
-      'Finish the migration and restart Homebridge: the HomeKit accessories of these units are removed.',
-    ].forEach((text) => {
-      const item = document.createElement('li');
-      item.textContent = text;
-      steps.appendChild(item);
-    });
-    matterMigrationHost.appendChild(steps);
-
-    const buttons = document.createElement('div');
-    buttons.className = 'd-flex align-items-center flex-wrap mb-2';
-    const bulk = (label, className, rows, choice, toast) => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = `btn btn-sm ${className}`;
-      button.style.marginRight = '8px';
-      button.textContent = `${label} (${rows.length})`;
-      button.disabled = rows.length === 0;
-      button.addEventListener('click', () => {
-        rows.forEach((row) => setMatterChoice(row, choice));
-        renderDevices();
-        sync();
-        homebridge.toast.info(toast, 'Matter');
+    if (hapRows.length + migratingRows.length > 0) {
+      const steps = document.createElement('ol');
+      steps.className = 'small mb-2';
+      steps.style.paddingLeft = '1.3em';
+      [
+        'Start the migration and restart Homebridge.',
+        'Add the Matter bridge in the Home app with the code below (once), then give each Matter '
+          + 'accessory its room and rebuild the scenes and automations that use the unit.',
+        'Finish the migration and restart Homebridge: the HomeKit accessories of these units are removed.',
+      ].forEach((text) => {
+        const item = document.createElement('li');
+        item.textContent = text;
+        steps.appendChild(item);
       });
-      buttons.appendChild(button);
-    };
-    bulk('Start migration for all units', 'btn-primary', hapRows, 'migrate',
-      'Save and restart Homebridge, then set up the Matter accessories in the Home app.');
-    bulk('Finish migration', 'btn-outline-primary', migratingRows, 'matter',
-      'Save and restart Homebridge to remove the HomeKit accessories of these units.');
-    matterMigrationHost.appendChild(buttons);
+      matterMigrationHost.appendChild(steps);
+
+      const buttons = document.createElement('div');
+      buttons.className = 'd-flex align-items-center flex-wrap mb-2';
+      const bulk = (label, className, rows, choice, toast) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = `btn btn-sm ${className}`;
+        button.style.marginRight = '8px';
+        button.textContent = `${label} (${rows.length})`;
+        button.disabled = rows.length === 0;
+        button.addEventListener('click', () => {
+          rows.forEach((row) => setMatterChoice(row, choice));
+          renderDevices();
+          sync();
+          homebridge.toast.info(toast, 'Matter');
+        });
+        buttons.appendChild(button);
+      };
+      bulk('Start migration for all units', 'btn-primary', hapRows, 'migrate',
+        'Save and restart Homebridge, then set up the Matter accessories in the Home app.');
+      bulk('Finish migration', 'btn-outline-primary', migratingRows, 'matter',
+        'Save and restart Homebridge to remove the HomeKit accessories of these units.');
+      matterMigrationHost.appendChild(buttons);
+    }
 
     const pairing = matterInfo.pairing;
+    if (!wantsMatter) {
+      return;
+    }
     if (!pairing) {
       const text = document.createElement('div');
       text.className = 'text-muted small';
@@ -1271,10 +1387,7 @@
   } catch (e) {
     // Treat as Matter off.
   }
-  // Child bridge: its own _bridge.matter block; otherwise the main bridge's.
-  matterOn = config._bridge && typeof config._bridge === 'object'
-    ? matterFlagEnabled(config._bridge.matter)
-    : matterInfo.mainBridgeMatterEnabled === true;
+  childBridge = config._bridge && typeof config._bridge === 'object' ? config._bridge : null;
   renderDevices();
 
   // Scan right away so the page opens with live device information.
