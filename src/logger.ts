@@ -41,6 +41,16 @@ export default class DaikinPlatformLogger {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  warn(...messages: any[]) {
+    for (let i = 0; i < messages.length; i++) {
+      if(this.logger !== undefined)
+        this.logger.warn(messages[i]);
+      else
+        this.tsLogger.warn(messages[i]);
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   error(...messages: any[]) {
     for (let i = 0; i < messages.length; i++) {
       if(this.logger !== undefined)

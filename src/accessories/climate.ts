@@ -1,6 +1,6 @@
 import { Service, PlatformAccessory, CharacteristicValue, CharacteristicSetCallback, CharacteristicGetCallback, CharacteristicEventTypes } from 'homebridge';
 import DaikinPlatform from '../platform';
-import { DEVICE_STATUS_REFRESH_INTERVAL } from '../const';
+import { AUTO_SETPOINT_OFFSET, DEVICE_STATUS_REFRESH_INTERVAL } from '../const';
 import { DaikinAccessoryContext} from '../types';
 import {
   CLIMATE_MODE_AUTO,
@@ -44,7 +44,7 @@ export default class ClimateAccessory {
 
     this._names = getServiceNames(platform.platformConfig.language);
 
-    accessory.context.device.setCallback(this.updateDeviceStatus.bind(this));
+    accessory.context.device.addCallback(this.updateDeviceStatus.bind(this));
 
     // Accessory Information
     // https://developers.homebridge.io/#/service/AccessoryInformation
@@ -185,7 +185,7 @@ export default class ClimateAccessory {
     this.services['Fan'].getCharacteristic(this.platform.Characteristic.RotationSpeed)
     .setProps({
       unit: null,
-      format: this.platform.Characteristic.Formats.UINT8,
+      format: this.platform.api.hap.Formats.UINT8,
       minValue: 0,
       maxValue: 6,
       validValues: [0, 1, 2, 3, 4, 5, 6]
@@ -536,149 +536,107 @@ export default class ClimateAccessory {
   }
 
 
+  // TargetHeaterCoolerState for the unit's mode — a mode this accessory does
+  // not offer (fan, dry, or e.g. Auto set from the remote on a unit marked
+  // cooling-only) falls back to auxModeTargetState.
+  private targetStateFor(mode: string): CharacteristicValue {
+    const State = this.platform.Characteristic.TargetHeaterCoolerState;
+    if (mode === CLIMATE_MODE_AUTO && this._supportsAuto) {
+      return State.AUTO;
+    }
+    if (mode === CLIMATE_MODE_HEATING && this._supportsHeat) {
+      return State.HEAT;
+    }
+    if (mode === CLIMATE_MODE_COOLING && this._supportsCool) {
+      return State.COOL;
+    }
+    return this.auxModeTargetState();
+  }
+
+  // Also keeps TargetHeaterCoolerState in step with the unit's mode — while
+  // it is off too, so the Home app shows the mode the unit will start in.
   async getCurrentHeaterCoolerState():Promise<CharacteristicValue> {
 
-    if(this.accessory.context.device.getPowerStatus()){
+    const device = this.accessory.context.device;
+    const State = this.platform.Characteristic.CurrentHeaterCoolerState;
+    const currentMode = device.getOperationMode() || CLIMATE_MODE_AUTO;
 
-      const currentTemperature = await this.accessory.context.device.getIndoorTemperature() || 0;
-      const targetTemperature = await this.accessory.context.device.getTargetTemperature() || 0;
-      const currentMode = await this.accessory.context.device.getOperationMode() || CLIMATE_MODE_AUTO;
+    this.services['Climate'].updateCharacteristic(
+      this.platform.Characteristic.TargetHeaterCoolerState, this.targetStateFor(currentMode));
 
-      switch (currentMode) 
-      {
-            // Auto
-            case CLIMATE_MODE_AUTO:
-              // Set target state and current state (based on current temperature)
-              this.services['Climate'].updateCharacteristic(
-                this.platform.Characteristic.TargetHeaterCoolerState,
-                this.platform.Characteristic.TargetHeaterCoolerState.AUTO,
-              );
-
-              if (currentTemperature < targetTemperature) {
-                this.services['Climate'].getCharacteristic(this.platform.Characteristic.CurrentHeaterCoolerState)
-                  .updateValue(this.platform.Characteristic.CurrentHeaterCoolerState.HEATING);
-              } else if (currentTemperature > targetTemperature) {
-                this.services['Climate'].getCharacteristic(this.platform.Characteristic.CurrentHeaterCoolerState)
-                  .updateValue(this.platform.Characteristic.CurrentHeaterCoolerState.COOLING);
-              } else {
-                this.services['Climate'].getCharacteristic(this.platform.Characteristic.CurrentHeaterCoolerState)
-                  .updateValue(this.platform.Characteristic.CurrentHeaterCoolerState.IDLE);
-              }
-              break;
-
-            // Heat
-            case CLIMATE_MODE_HEATING:
-              this.services['Climate'].updateCharacteristic(
-                this.platform.Characteristic.TargetHeaterCoolerState,
-                this.platform.Characteristic.TargetHeaterCoolerState.HEAT,
-              );
-
-              if (currentTemperature < targetTemperature) {
-                this.services['Climate'].getCharacteristic(this.platform.Characteristic.CurrentHeaterCoolerState)
-                  .updateValue(this.platform.Characteristic.CurrentHeaterCoolerState.HEATING);
-              } else {
-                this.services['Climate'].getCharacteristic(this.platform.Characteristic.CurrentHeaterCoolerState)
-                  .updateValue(this.platform.Characteristic.CurrentHeaterCoolerState.IDLE);
-              }
-              break;
-
-            // Cool
-            case CLIMATE_MODE_COOLING:
-              this.services['Climate'].updateCharacteristic(
-                this.platform.Characteristic.TargetHeaterCoolerState,
-                this.platform.Characteristic.TargetHeaterCoolerState.COOL,
-              );
-
-              if (currentTemperature > targetTemperature) {
-                this.services['Climate'].getCharacteristic(this.platform.Characteristic.CurrentHeaterCoolerState)
-                  .updateValue(this.platform.Characteristic.CurrentHeaterCoolerState.COOLING);
-              } else {
-                this.services['Climate'].getCharacteristic(this.platform.Characteristic.CurrentHeaterCoolerState)
-                  .updateValue(this.platform.Characteristic.CurrentHeaterCoolerState.IDLE);
-              }
-              break;
-
-            // Dry (Dehumidifier)
-            case CLIMATE_MODE_DEHUMIDIFY:
-              this.services['Climate'].getCharacteristic(this.platform.Characteristic.CurrentHeaterCoolerState)
-                .updateValue(this.platform.Characteristic.CurrentHeaterCoolerState.IDLE);
-                this.services['Climate'].updateCharacteristic(
-                this.platform.Characteristic.TargetHeaterCoolerState,
-
-                this.auxModeTargetState(),
-              );
-              break;
-
-            // Humidifier
-            case CLIMATE_MODE_HUMIDIFY:
-              this.services['Climate'].getCharacteristic(this.platform.Characteristic.CurrentHeaterCoolerState)
-                .updateValue(this.platform.Characteristic.CurrentHeaterCoolerState.IDLE);
-                this.services['Climate'].updateCharacteristic(
-                this.platform.Characteristic.TargetHeaterCoolerState,
-
-                this.auxModeTargetState(),
-              );
-              break;
-
-            // Fan
-            case CLIMATE_MODE_FAN:
-              this.services['Climate'].getCharacteristic(this.platform.Characteristic.CurrentHeaterCoolerState)
-                .updateValue(this.platform.Characteristic.CurrentHeaterCoolerState.IDLE);
-                this.services['Climate'].updateCharacteristic(
-                this.platform.Characteristic.TargetHeaterCoolerState,
-
-                this.auxModeTargetState(),
-              );
-              break;
-
-            default:
-              this.platform.log.error(
-                `Unknown TargetHeaterCoolerState state: '${this.accessory.displayName}' '${currentMode}'`);
-              break;
-          }
-          return this.services['Climate'].getCharacteristic(this.platform.Characteristic.CurrentHeaterCoolerState).value
-            ?? this.platform.Characteristic.CurrentHeaterCoolerState.INACTIVE;
-
+    if (!device.getPowerStatus()) {
+      this.services['Climate'].getCharacteristic(State).updateValue(State.INACTIVE);
+      return State.INACTIVE;
     }
 
-    return this.platform.Characteristic.CurrentHeaterCoolerState.INACTIVE;
-  
+    const currentTemperature = device.getIndoorTemperature() || 0;
+    const targetTemperature = device.getTargetTemperature() || 0;
+
+    let state = State.IDLE;
+    if ((currentMode === CLIMATE_MODE_AUTO || currentMode === CLIMATE_MODE_HEATING) && currentTemperature < targetTemperature) {
+      state = State.HEATING;
+    } else if ((currentMode === CLIMATE_MODE_AUTO || currentMode === CLIMATE_MODE_COOLING) && currentTemperature > targetTemperature) {
+      state = State.COOLING;
+    } else if (![CLIMATE_MODE_AUTO, CLIMATE_MODE_HEATING, CLIMATE_MODE_COOLING, CLIMATE_MODE_DEHUMIDIFY,
+      CLIMATE_MODE_HUMIDIFY, CLIMATE_MODE_FAN].includes(currentMode)) {
+      this.platform.log.error(`Unknown TargetHeaterCoolerState state: '${this.accessory.displayName}' '${currentMode}'`);
+    }
+
+    this.services['Climate'].getCharacteristic(State).updateValue(state);
+    return state;
+  }
+
+  // Threshold shown for a mode's setpoint. Daikin's Auto has one target of
+  // its own, shown as a range of ± AUTO_SETPOINT_OFFSET around it (same as
+  // the Matter accessory); outside Auto each threshold is that mode's target.
+  private thresholdTemperature(setpointMode: string): number {
+    const device = this.accessory.context.device;
+    const characteristic = setpointMode === CLIMATE_MODE_COOLING
+      ? this.platform.Characteristic.CoolingThresholdTemperature
+      : this.platform.Characteristic.HeatingThresholdTemperature;
+    const props = this.services['Climate'].getCharacteristic(characteristic).props;
+    let value = device.getTargetTemperatureWithMode(setpointMode);
+    if (device.getOperationMode() === CLIMATE_MODE_AUTO) {
+      value = device.getTargetTemperatureWithMode(CLIMATE_MODE_AUTO)
+        + (setpointMode === CLIMATE_MODE_COOLING ? AUTO_SETPOINT_OFFSET : -AUTO_SETPOINT_OFFSET);
+    }
+    return Math.min(Math.max(value, props.minValue ?? value), props.maxValue ?? value);
+  }
+
+  // In Auto, moving either end of the range moves the Auto target and the
+  // unit stays in Auto. Otherwise the unit switches to the threshold's mode
+  // (the Home app shows both thresholds while the unit runs fan/dry).
+  private async setThresholdTemperature(value: CharacteristicValue, setpointMode: string) {
+    const device = this.accessory.context.device;
+    const threshold: number = +value;
+
+    if (device.getOperationMode() === CLIMATE_MODE_AUTO) {
+      this.assertCommand(await device.setTargetTemperature(
+        threshold + (setpointMode === CLIMATE_MODE_HEATING ? AUTO_SETPOINT_OFFSET : -AUTO_SETPOINT_OFFSET)));
+      return;
+    }
+    this.assertCommand(await device.setOperationMode(setpointMode));
+    this.assertCommand(await device.setTargetTemperature(threshold));
   }
 
   async getCoolingThresholdTemperature():Promise<CharacteristicValue> {
-      
-      this.platform.log.debug(`Accessory: getCoolingThresholdTemperature() for device '${this.accessory.displayName}'`);
-  
-      const value = this.accessory.context.device.getTargetTemperatureWithMode(CLIMATE_MODE_COOLING);
-      return value;
+    this.platform.log.debug(`Accessory: getCoolingThresholdTemperature() for device '${this.accessory.displayName}'`);
+    return this.thresholdTemperature(CLIMATE_MODE_COOLING);
   }
 
   async getHeatingThresholdTemperature():Promise<CharacteristicValue> {
-      
-      this.platform.log.debug(`Accessory: getHeatingThresholdTemperature() for device '${this.accessory.displayName}'`);
-  
-      const value = this.accessory.context.device.getTargetTemperatureWithMode(CLIMATE_MODE_HEATING);
-      return value;
+    this.platform.log.debug(`Accessory: getHeatingThresholdTemperature() for device '${this.accessory.displayName}'`);
+    return this.thresholdTemperature(CLIMATE_MODE_HEATING);
   }
 
   async setCoolingThresholdTemperature(value: CharacteristicValue) {
-
     this.platform.log.debug(`Accessory: setCoolingThresholdTemperature() for device '${this.accessory.displayName}'`);
-
-    const threshold:number = +value;
-
-    this.assertCommand(await this.accessory.context.device.setOperationMode(CLIMATE_MODE_COOLING));
-    this.assertCommand(await this.accessory.context.device.setTargetTemperature(threshold));
+    await this.setThresholdTemperature(value, CLIMATE_MODE_COOLING);
   }
 
   async setHeatingThresholdTemperature(value: CharacteristicValue) {
-
     this.platform.log.debug(`Accessory: setHeatingThresholdTemperature() for device '${this.accessory.displayName}'`);
-
-    const threshold:number = +value;
-
-    this.assertCommand(await this.accessory.context.device.setOperationMode(CLIMATE_MODE_HEATING));
-    this.assertCommand(await this.accessory.context.device.setTargetTemperature(threshold));
+    await this.setThresholdTemperature(value, CLIMATE_MODE_HEATING);
   }
 
   async setTargetHeaterCoolerState(value: CharacteristicValue) {
@@ -727,10 +685,10 @@ export default class ClimateAccessory {
       // updateCharacteristic would re-add a removed optional characteristic,
       // so only push values for modes this accessory exposes.
       if (this._supportsHeat) {
-        this.services['Climate'].updateCharacteristic(this.platform.Characteristic.HeatingThresholdTemperature, this.accessory.context.device.getTargetTemperatureWithMode(CLIMATE_MODE_HEATING));
+        this.services['Climate'].updateCharacteristic(this.platform.Characteristic.HeatingThresholdTemperature, this.thresholdTemperature(CLIMATE_MODE_HEATING));
       }
       if (this._supportsCool) {
-        this.services['Climate'].updateCharacteristic(this.platform.Characteristic.CoolingThresholdTemperature, this.accessory.context.device.getTargetTemperatureWithMode(CLIMATE_MODE_COOLING));
+        this.services['Climate'].updateCharacteristic(this.platform.Characteristic.CoolingThresholdTemperature, this.thresholdTemperature(CLIMATE_MODE_COOLING));
       }
   
       if (this._supportsHumidity) {

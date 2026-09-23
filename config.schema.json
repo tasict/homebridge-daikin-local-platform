@@ -46,6 +46,20 @@
           "type": "string"
         }
       },
+      "climateMatter": {
+        "type": "array",
+        "description": "Units published over Matter instead of HomeKit (HAP), by IP exactly as written in climateIPs. Takes effect only while Matter is enabled on this plugin's bridge. Edited from the device list in the settings UI.",
+        "items": {
+          "type": "string"
+        }
+      },
+      "climateMatterMigration": {
+        "type": "array",
+        "description": "Units published over both HomeKit (HAP) and Matter while moving them to Matter, by IP exactly as written in climateIPs, so the Matter accessory can be set up in the Home app while the HomeKit one keeps working. Takes precedence over climateMatter. Edited from the device list in the settings UI.",
+        "items": {
+          "type": "string"
+        }
+      },
       "language": {
         "title": "HomeKit Name Language",
         "description": "Language for the default HomeKit names of the switches and sensors this plugin creates (e.g. Outdoor Temperature, Vertical Swing, Horizontal Swing). Same options as the Homebridge UI language; the settings UI defaults it to the language selected there. Names changed in the Home app are never touched.",

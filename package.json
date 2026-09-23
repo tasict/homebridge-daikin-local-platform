@@ -2,7 +2,7 @@
   "name": "homebridge-daikin-local-platform",
   "displayName": "Homebridge Daikin Local Platform",
   "version": "1.5.1",
-  "description": "Homebridge platform plugin providing HomeKit support for Daikin air conditioners with local control",
+  "description": "Homebridge platform plugin providing HomeKit and Matter support for Daikin air conditioners with local control",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -17,8 +17,8 @@
     "url": "https://PayPal.Me/tasict"
   },
   "engines": {
-    "homebridge": "^1.6.0 || ^2.0.0-beta.0",
-    "node": "^18.20.4 || ^20.15.1 || ^22 || ^24"
+    "homebridge": "^2.4.0",
+    "node": "^22 || ^24 || ^26"
   },
   "main": "dist/index.js",
   "scripts": {
@@ -38,12 +38,15 @@
     "ac",
     "air conditioner",
     "daikin",
-    "daikin local"
+    "daikin local",
+    "supports-hap",
+    "supports-matter"
   ],
   "dependencies": {
     "@homebridge/plugin-ui-utils": "^2.2.5",
     "axios": "^1.6.7",
     "axios-rate-limit": "^1.4.0",
+    "qrcode": "^1.5.4",
     "tslog": "^4.9.2"
   },
   "devDependencies": {
@@ -52,7 +55,7 @@
     "@typescript-eslint/parser": "^8.65.0",
     "eslint": "^8.56.0",
     "eslint-plugin-react": "^7.33.2",
-    "homebridge": "^1.7.0",
+    "homebridge": "^2.4.0",
     "rimraf": "^5.0.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"

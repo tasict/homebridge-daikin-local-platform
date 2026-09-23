@@ -42,6 +42,16 @@ export const FAN_SPEED_TABLE: { code: string; number: number; name: string }[] =
   { code: CLIMATE_FAN_SPEED_5, number: 6, name: '5' },
 ];
 
+// Energy counters as the unit reports them (dsiot `i_power`). Arrays are
+// chronological: dailyWh ends with today, thisYearKWh with the current month.
+export interface EnergyHistory {
+  todayRuntimeMinutes: number;
+  dailyWh: number[];          // last 7 days, 100 Wh resolution
+  thisYearKWh: number[];      // Jan .. current month
+  previousYearKWh: number[];  // Jan .. Dec
+  utcOffsetMinutes?: number;  // the unit's time zone, which sets its day boundary
+}
+
 // One request at a time across every device so a burst of HomeKit reads
 // cannot flood the units.
 const http = rateLimit(axios.create(), { maxRequests: 1, perMilliseconds: 500 });
@@ -56,7 +66,8 @@ export abstract class DaikinDevice {
   protected _Response: object;
   protected _log: DaikinPlatformLogger;
   protected _lastUpdateTimestamp: number = 0;
-  protected _callback: ((device: DaikinDevice) => void) | null = null;
+  // Status listeners: a unit being migrated has both a HAP and a Matter accessory.
+  protected _callbacks: ((device: DaikinDevice) => void)[] = [];
   // Shared promise for an in-flight query so concurrent reads don't each hit the unit.
   protected _inflightQuery: Promise<any> | null = null;
 
@@ -69,8 +80,8 @@ export abstract class DaikinDevice {
     this._log = log;
   }
 
-  public setCallback(callback: (device: DaikinDevice) => void) {
-    this._callback = callback;
+  public addCallback(callback: (device: DaikinDevice) => void) {
+    this._callbacks.push(callback);
   }
 
   protected async request(config: AxiosRequestConfig): Promise<any> {
@@ -135,9 +146,7 @@ export abstract class DaikinDevice {
 
     this.log.debug(`Daikin - fetchDeviceStatus(${bForce}): Name: ${this.getDeviceName()} MAC:${this.getMacAddress()} Power:${this.getPowerStatus()} Temp:${this.getIndoorTemperature()} Humidity:${this.getIndoorHumidity()} Target Temp:${this.getTargetTemperature()}'  Mode:${this.getOperationModeName()} FanSpeed:${this.getFanSpeedName()} `);
 
-    if(this._callback) {
-      this._callback(this);
-    }
+    this._callbacks.forEach((callback) => callback(this));
 
     return true;
   }
@@ -258,6 +267,20 @@ export abstract class DaikinDevice {
   public async setSwing(vertical: boolean, horizontal: boolean): Promise<boolean> {
     this.log.debug(`Daikin - setSwing(${vertical}, ${horizontal}): not supported by '${this._IP}'`);
     return false;
+  }
+
+  // Power / energy metering (dsiot units with the en_ipower function only).
+  public supportsPowerMeasurement(): boolean {
+    return false;
+  }
+
+  // Instantaneous consumption in W, NaN when unknown.
+  public getPowerConsumption(): number {
+    return NaN;
+  }
+
+  public async fetchEnergyHistory(): Promise<EnergyHistory | undefined> {
+    return undefined;
   }
 
   // Optional features not available on every protocol; subclasses override.

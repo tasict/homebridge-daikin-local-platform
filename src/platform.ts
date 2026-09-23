@@ -4,18 +4,23 @@ import {
   Characteristic,
   DynamicPlatformPlugin,
   Logger,
+  MatterAccessory,
   PlatformAccessory,
   PlatformConfig,
   Service,
 } from 'homebridge';
 import {DaikinLocalAPI, DaikinDevice} from './daikin-local';
 import ClimateAccessory from './accessories/climate';
+import ClimateMatterAccessory, { thermostatFeatureSignature } from './accessories/climate-matter';
 import DaikinPlatformLogger from './logger';
 import { DaikinAccessoryContext, DaikinPlatformConfig } from './types';
 import {
   PLATFORM_NAME,
   PLUGIN_NAME,
 } from './settings';
+
+const MATTER_REGISTER_ATTEMPTS = 10;
+const MATTER_REGISTER_RETRY_MS = 3000;
 
 /**
  * Daikin Local Platform Plugin for Homebridge
@@ -31,6 +36,10 @@ export default class DaikinPlatform implements DynamicPlatformPlugin {
   public readonly log: DaikinPlatformLogger;
 
   protected readonly DaikinDevices: Record<string, DaikinDevice> = {};
+
+  // Matter (Homebridge 2.x with Matter enabled on this bridge only).
+  private matterEnabled = false;
+  private readonly matterAccessories = new Map<string, MatterAccessory>();
 
   public platformConfig: DaikinPlatformConfig;
 
@@ -69,6 +78,12 @@ export default class DaikinPlatform implements DynamicPlatformPlugin {
   }
 
   async configurePlugin() {
+    this.matterEnabled = (this.api.isMatterAvailable?.() ?? false) && (this.api.isMatterEnabled?.() ?? false);
+    const wantsMatter = [...(this.platformConfig.climateMatter ?? []), ...(this.platformConfig.climateMatterMigration ?? [])];
+    if (!this.matterEnabled && wantsMatter.length > 0) {
+      this.log.warn('Some units are set to Matter, but Matter is not enabled on this bridge '
+        + '- publishing them over HomeKit (HAP) instead. Turn Matter on in the Homebridge bridge settings to use it.');
+    }
     await this.checkDevices();
   }
 
@@ -93,6 +108,20 @@ export default class DaikinPlatform implements DynamicPlatformPlugin {
   // (climateSwingSwitches) on this unit.
   isSwingSwitchesEnabled(ip: string | undefined): boolean {
     return this.configListHas(this.platformConfig.climateSwingSwitches, ip);
+  }
+
+  // Where a unit is published, when this bridge has Matter: climateMatter =
+  // Matter only; climateMatterMigration = both, so the Matter accessory can
+  // be set up in the Home app (rooms, automations) while the HomeKit one
+  // keeps working, until the user moves the unit on to climateMatter.
+  resolveProtocol(ip: string | undefined): 'hap' | 'both' | 'matter' {
+    if (!this.matterEnabled) {
+      return 'hap';
+    }
+    if (this.configListHas(this.platformConfig.climateMatterMigration, ip)) {
+      return 'both';
+    }
+    return this.configListHas(this.platformConfig.climateMatter, ip) ? 'matter' : 'hap';
   }
 
   async checkDevices() {
@@ -120,6 +149,8 @@ export default class DaikinPlatform implements DynamicPlatformPlugin {
       }
     }
 
+    const matterClimates: ClimateMatterAccessory[] = [];
+
     await this.daikinLocalAPI.fetchDevices(this.platformConfig.climateIPs, climateKeys).then((devices) => {
 
       for(let i = 0; i < devices.length; i++) {
@@ -130,6 +161,21 @@ export default class DaikinPlatform implements DynamicPlatformPlugin {
           if(!devices[i].getMacAddress()) {
             this.log.error(`Device ${devices[i].getDeviceName()} has no MAC address - skipping.`);
             continue;
+          }
+
+          const protocol = this.resolveProtocol(devices[i].IP);
+          if (protocol !== 'hap') {
+            // Homebridge rebuilds no Matter endpoint or handler from its cache:
+            // every unit is registered again on each launch (pairing and
+            // attribute state survive).
+            const climate = new ClimateMatterAccessory(this, devices[i]);
+            this.log.info(`${this.matterAccessories.has(climate.UUID) ? 'Restoring' : 'Adding'} Matter accessory `
+              + `'${climate.accessory.displayName}' (${devices[i].getMacAddress()}).`);
+            this.DaikinDevices[devices[i].getMacAddress()] = devices[i];
+            matterClimates.push(climate);
+            if (protocol === 'matter') {
+              continue;
+            }
           }
 
           const uuid = this.api.hap.uuid.generate(devices[i].getMacAddress());
@@ -177,6 +223,13 @@ export default class DaikinPlatform implements DynamicPlatformPlugin {
     
     });
 
+    if (matterClimates.length > 0) {
+      await Promise.all(matterClimates.map((m) => m.loadEnergy()));
+      await this.registerMatterClimates(matterClimates);
+    }
+
+    await this.reconcileProtocolSwitches();
+
     for (const cachedAccessory of this.accessories) {
 
       if (cachedAccessory.context.device) {
@@ -205,11 +258,81 @@ export default class DaikinPlatform implements DynamicPlatformPlugin {
 
   }
 
+  // The bridge's Matter server can still be starting right after launch
+  // (registration then throws), so retry for a little while.
+  private async registerMatterClimates(climates: ClimateMatterAccessory[]) {
+    // Homebridge keeps a cache-restored endpoint whose thermostat features
+    // came from the cached setpoints; when the unit's feature set changed
+    // (e.g. cooling-only toggled), make Homebridge rebuild it.
+    for (const climate of climates) {
+      const cached = this.matterAccessories.get(climate.UUID);
+      if (cached && thermostatFeatureSignature(cached.clusters) !== thermostatFeatureSignature(climate.accessory.clusters)) {
+        this.log.info(`Rebuilding Matter accessory '${cached.displayName}' because its heating/cooling modes changed.`);
+        climate.composeThermostat();
+      }
+    }
+
+    for (let attempt = 1; ; attempt++) {
+      try {
+        await this.api.matter!.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, climates.map((m) => m.accessory));
+        // A migrating unit's HomeKit accessory already polls the device.
+        climates.forEach((m) => m.start(this.resolveProtocol(m.accessory.context.ip as string) === 'matter'));
+        return;
+      }
+      catch (e) {
+        if (attempt >= MATTER_REGISTER_ATTEMPTS) {
+          this.log.error(`Error registering Matter accessories: ${e}`);
+          return;
+        }
+        this.log.debug(`Matter registration attempt ${attempt} failed, retrying: ${e}`);
+        await new Promise((resolve) => setTimeout(resolve, MATTER_REGISTER_RETRY_MS));
+      }
+    }
+  }
+
+  // Drop the cached accessory of the protocol a unit no longer uses, so it
+  // does not show up twice. Keyed by the configured IP, not by whether the
+  // unit answered, so a unit that is offline at startup keeps its accessory.
+  private async reconcileProtocolSwitches() {
+
+    for (const cachedAccessory of [...this.accessories]) {
+      const ip = cachedAccessory.context.device?.IP;
+      if (this.resolveProtocol(ip) === 'matter') {
+        this.log.info(`Removing HomeKit accessory '${cachedAccessory.displayName}' because it is now published over Matter.`);
+        this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [cachedAccessory]);
+        this.accessories.splice(this.accessories.indexOf(cachedAccessory), 1);
+      }
+    }
+
+    if (!this.api.matter) {
+      return;
+    }
+
+    for (const cached of this.matterAccessories.values()) {
+      const ip = cached.context?.ip as string | undefined;
+      if (this.resolveProtocol(ip) !== 'hap' && this.configListHas(this.platformConfig.climateIPs, ip)) {
+        continue;
+      }
+      this.log.info(`Removing Matter accessory '${cached.displayName}' because it is no longer published over Matter.`);
+      try {
+        await this.api.matter.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [cached]);
+      }
+      catch (e) {
+        this.log.error(`Error removing Matter accessory ${cached.displayName}: ${e}`);
+      }
+    }
+  }
+
+  // Homebridge 2.x: cached Matter accessories, restored before launch finishes.
+  configureMatterAccessory(accessory: MatterAccessory) {
+    this.matterAccessories.set(accessory.UUID, accessory);
+  }
+
   /**
    * This function is invoked when Homebridge restores cached accessories from disk at startup.
    * It should be used to set up event handlers for characteristics and update respective values.
    */
-  configureAccessory(accessory: PlatformAccessory<DaikinAccessoryContext>) {
+  configureAccessory(accessory: PlatformAccessory) {
     this.log.info(`Loading accessory '${accessory.displayName}' from cache.`);
 
     /**
@@ -219,7 +342,7 @@ export default class DaikinPlatform implements DynamicPlatformPlugin {
      * But we need to add the restored accessory to the
      * accessories cache so we can access it during that process.
      */
-    this.accessories.push(accessory);
+    this.accessories.push(accessory as PlatformAccessory<DaikinAccessoryContext>);
   }
 
 

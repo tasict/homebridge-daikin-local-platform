@@ -8,6 +8,7 @@ import {
 
 import {
   DaikinDevice,
+  EnergyHistory,
   CLIMATE_MODE_FAN,
   CLIMATE_MODE_HEATING,
   CLIMATE_MODE_COOLING,
@@ -67,6 +68,18 @@ const SWING_OFF_BYTE = '00';
 const COMMAND_PROBE = '{"requests":[{"op":2,"to":"/dsiot/edge.adp_i?filter=pv"}]}';
 const COMMAND_QUERY = '{"requests":[{"op":2,"to":"/dsiot/edge.adp_i?filter=pv"},{"op":2,"to":"/dsiot/edge.adp_d?filter=pv"},{"op":2,"to":"/dsiot/edge.adp_f?filter=pv"},{"op":2,"to":"/dsiot/edge.dev_i?filter=pv"},{"op":2,"to":"/dsiot/edge/adr_0100.dgc_status?filter=pv"}]}';
 const COMMAND_QUERY_WITH_MD = '{"requests":[{"op":2,"to":"/dsiot/edge.adp_i?filter=pv"},{"op":2,"to":"/dsiot/edge.adp_d?filter=pv"},{"op":2,"to":"/dsiot/edge.adp_f?filter=pv"},{"op":2,"to":"/dsiot/edge.dev_i?filter=pv"},{"op":2,"to":"/dsiot/edge/adr_0100.dgc_status"},{"op":2,"to":"/dsiot/edge/adr_0200.dgc_status"}]}';
+// The energy history only comes with the whole-tree dump (~28 KB).
+const COMMAND_QUERY_EDGE = '{"requests":[{"op":2,"to":"/dsiot/edge"}]}';
+
+// Metadata step `st`: low nibble = base, high nibble = signed power of ten
+// (17 = 0x11 -> 1 * 10^1 = 10 W steps; 241 = 0xF1 -> 0.1).
+function decodeStep(st: unknown): number {
+  if (typeof st !== 'number') {
+    return 1;
+  }
+  const exponent = (st >> 4) & 0x0F;
+  return (st & 0x0F) * Math.pow(10, exponent >= 8 ? exponent - 16 : exponent);
+}
 
 // Devices running the newer JSON protocol (`/dsiot/multireq`), i.e. firmware 2.8.0+
 // adapters — what pydaikin calls BRP084.
@@ -396,6 +409,54 @@ export class DaikinDsiotDevice extends DaikinDevice {
 
     const command = [{"pn": "e_3003", "pch": [{"pn": "p_2D", "pv": CLIMATE_OPERATE_SETTING}]}, {"pn": "e_3001", "pch": settings}];
     return await this.sendCommand(command);
+  }
+
+  public supportsPowerMeasurement(): boolean {
+    return this.extractValue(this._Response, '/dsiot/edge.adp_i', 'func/en_ipower') === 1;
+  }
+
+  // Outdoor-unit power at adr_0200: 3-byte little-endian count of `md.st` steps.
+  public getPowerConsumption(): number {
+    const element = this.extractObject(this._Response, '/dsiot/edge/adr_0200.dgc_status', 'e_1003/e_A005/p_01');
+    const raw = element ? element['pv'] : undefined;
+    if (typeof raw !== 'string' || !/^[0-9A-Fa-f]{6}$/.test(raw)) {
+      return NaN;
+    }
+    const count = parseInt(raw.substring(4, 6) + raw.substring(2, 4) + raw.substring(0, 2), 16);
+    return count * decodeStep(element!['md']?.['st']);
+  }
+
+  public async fetchEnergyHistory(): Promise<EnergyHistory | undefined> {
+
+    try {
+      const response = await this.post(COMMAND_QUERY_EDGE);
+      const list = (name: string) => {
+        const value = this.extractValue(response.data, '/dsiot/edge', 'adr_0100/i_power/' + name);
+        return Array.isArray(value) ? value.filter((v) => typeof v === 'number') : [];
+      };
+      const dailyWh = list('week_power/datas');
+
+      const tmdf = this.extractValue(response.data, '/dsiot/edge', 'adp_d/timz/tmdf');
+
+      if (dailyWh.length === 0) {
+        this.log.debug(`Daikin - fetchEnergyHistory('${this._IP}'): no i_power data`);
+        return undefined;
+      }
+
+      return {
+        todayRuntimeMinutes: Number(this.extractValue(response.data, '/dsiot/edge', 'adr_0100/i_power/week_power/today_runtime')) || 0,
+        dailyWh,
+        thisYearKWh: list('year_power/this_year'),
+        previousYearKWh: list('year_power/previous_year'),
+        // ponytail: DST flag (timz/dst) ignored; add it if a DST-region unit drifts by an hour.
+        utcOffsetMinutes: typeof tmdf === 'number' ? tmdf : undefined,
+      };
+    }
+    catch(e) {
+      this.log.debug(`Daikin - fetchEnergyHistory('${this._IP}'): Error: '${e}'`);
+    }
+
+    return undefined;
   }
 
   public getMotionDetection(): boolean {

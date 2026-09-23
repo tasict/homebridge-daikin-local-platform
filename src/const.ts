@@ -10,3 +10,13 @@ export const MIN_REQUEST_INTERVAL_MS = 2000;
 export const REQUEST_TIMEOUT_MS = 20 * 1000;
 
 export const DEVICE_STATUS_REFRESH_INTERVAL = 30 * 1000;
+
+// The energy history is a separate, much larger request (the whole /dsiot/edge
+// tree), so it is polled on its own slow cadence instead of every status refresh.
+export const ENERGY_REFRESH_INTERVAL_MS = 15 * 60 * 1000;
+
+// Daikin's Auto mode has a single target temperature. Both accessories show
+// it as a heating..cooling range of target ± this offset (HomeKit's Auto range
+// slider; Matter's 2 °C default dead band), and moving either end moves the
+// target instead of leaving Auto.
+export const AUTO_SETPOINT_OFFSET = 1;

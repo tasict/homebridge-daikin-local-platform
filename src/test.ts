@@ -23,13 +23,15 @@ const logger = new DaikinPlatformLogger(undefined, true);
 
 const daikinLocalAPI = new DaikinLocalAPI(logger);
 
-daikinLocalAPI.fetchDevices(["10.1.10.120", "10.1.10.121", "10.1.10.122", "10.1.10.123"]).then((devices) => {
+daikinLocalAPI.fetchDevices(["10.1.10.120", "10.1.10.121", "10.1.10.122", "10.1.10.123", "10.1.10.125"]).then((devices) => {
 
   for(let i = 0; i < devices.length; i++) {
     logger.info(`Name: '${devices[i].getDeviceName()}' Temp: '${devices[i].getIndoorTemperature()}' Humidity: '${devices[i].getIndoorHumidity()}' Target Temp: '${devices[i].getTargetTemperature()}'  Mode: '${devices[i].getOperationModeName()}' FanSpeed: '${devices[i].getFanSpeedName()}'`);
     logger.info(`Model: ${ devices[i].getDeviceType()} SSID: ${devices[i].getSSID()} Supported Modes: ${devices[i].getSupportedOperationModeNames().join(', ')}`);
+    logger.info(`Power metering: ${devices[i].supportsPowerMeasurement()} Power: ${devices[i].getPowerConsumption()} W`);
+    devices[i].fetchEnergyHistory().then((history) => logger.info(`Energy: ${JSON.stringify(history)}`));
     devices[i].setShowSSID(false);
-    devices[i].setCallback(updateDeviceStatus);
+    devices[i].addCallback(updateDeviceStatus);
   }
 
 });
