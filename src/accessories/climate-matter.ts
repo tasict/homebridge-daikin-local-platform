@@ -58,6 +58,20 @@ const STEP_BY_FAN_MODE: Record<number, number> = { [FAN_MODE_LOW]: 2, [FAN_MODE_
 
 const INITIAL_PUSH_DELAY_MS = 5000;
 
+// Matter caps a bridged device's name (nodeLabel) at 32 bytes; a longer one
+// fails the accessory's registration. Cut at a character boundary.
+const NODE_LABEL_MAX_BYTES = 32;
+const fitLabel = (text: string, maxBytes = NODE_LABEL_MAX_BYTES): string => {
+  let fitted = '';
+  for (const char of text) {
+    if (Buffer.byteLength(fitted + char) > maxBytes) {
+      break;
+    }
+    fitted += char;
+  }
+  return fitted.trim();
+};
+
 const toMatterTemp = (celsius: number) => Math.round(celsius * 100);
 const fromMatterTemp = (value: number) => Math.round(value / 50) / 2; // 0.01 °C -> 0.5 °C steps
 const clamp = (value: number, [min, max]: number[]) => Math.min(Math.max(value, min), max);
@@ -82,15 +96,25 @@ const check = (ok: boolean) => {
 // setpoints, identically for fresh and restored endpoints: heating + cooling
 // setpoints = Heating, Cooling and AutoMode; cooling only = Cooling.
 //
-// Apple Home shows only power, mode and setpoints on a thermostat, so everything
-// else HomeKit shows on its own tiles becomes a child endpoint: the fan, the
-// humidity and outdoor temperature sensors and the swing switches. Units with
+// Apple Home shows only power, mode and setpoints on a thermostat, so the
+// fan, the humidity and outdoor temperature sensors and the optional swing
+// switch (climateMatterSwing) are accessories of their own, named
+// "<unit> <role>". Not child endpoints: Apple Home ignores the names of
+// those (it showed "Outlet", "Outlet 1", ...) and turns a unit with outlet
+// children into a power strip. Unlike their HomeKit counterparts, the fan
+// and swing tiles show the running unit: both read off while it is off, and
+// switching either on starts it. Units with
 // the en_ipower function also get the electrical power/energy clusters on the
 // main endpoint, which is what the iOS 27 Home app's Energy view reads.
 export default class ClimateMatterAccessory {
 
   public readonly UUID: string;
   public readonly accessory: MatterAccessory;
+  // The unit's other accessories (fan, sensors, swing), see the class comment.
+  public readonly fanAccessory: MatterAccessory;
+  public readonly humidityAccessory?: MatterAccessory;
+  public readonly outdoorAccessory?: MatterAccessory;
+  public readonly swingAccessory?: MatterAccessory;
   private readonly supportsHeat: boolean;
   private readonly supportsCool: boolean;
   private readonly supportsSwingVertical: boolean;
@@ -103,6 +127,10 @@ export default class ClimateMatterAccessory {
   // Last explicit fan speed, restored when the fan is switched back on
   // (same as ClimateAccessory; starts at quiet).
   private lastFanStep = 1;
+  // Controller commands, one after another: two can arrive together (e.g.
+  // matter.js moving the idle setpoint along with the active one), and each
+  // must see the unit state the previous one left.
+  private queue: Promise<unknown> = Promise.resolve();
 
   constructor(
     private readonly platform: DaikinPlatform,
@@ -111,7 +139,7 @@ export default class ClimateMatterAccessory {
     const matter = platform.api.matter!;
     const mac = device.getMacAddress();
     const names = getServiceNames(platform.platformConfig.language);
-    const displayName = device.getDeviceName() || names.airConditioner;
+    const displayName = fitLabel(device.getDeviceName() || names.airConditioner);
 
     this.UUID = matter.uuid.generate(mac);
     this.supportsCool = device.supportsOperationMode(CLIMATE_MODE_COOLING);
@@ -154,54 +182,6 @@ export default class ClimateMatterAccessory {
       clusters.electricalEnergyMeasurement = { cumulativeEnergyImported: null, periodicEnergyImported: null };
     }
 
-    // Child endpoints. Homebridge tags each with its array index, which
-    // controllers use to tell them apart across restarts, so the order is
-    // fixed and the config-dependent per-axis swing switches come last.
-    const parts: NonNullable<MatterAccessory['parts']> = [{
-      id: 'fan',
-      displayName,
-      deviceType: matter.deviceTypes.Fan,
-      clusters: { fanControl: { ...this.fanState(), fanModeSequence: FAN_MODE_SEQUENCE_OFF_LOW_MED_HIGH } },
-      handlers: {
-        fanControl: {
-          fanModeChange: ({ fanMode }) => this.setFanMode(fanMode),
-          percentSettingChange: ({ percentSetting }) => this.setFanPercent(percentSetting),
-        },
-      },
-    }];
-    if (device.supportsIndoorHumidity()) {
-      parts.push({
-        id: 'humidity',
-        displayName,
-        deviceType: matter.deviceTypes.HumiditySensor,
-        clusters: { relativeHumidityMeasurement: this.humidityState() },
-      });
-    }
-    if (device.supportsOutdoorTemperature()) {
-      parts.push({
-        id: 'outdoor-temperature',
-        displayName: names.outdoorTemperature,
-        deviceType: matter.deviceTypes.TemperatureSensor,
-        clusters: { temperatureMeasurement: this.outdoorState() ?? { measuredValue: null } },
-      });
-    }
-    // Swing: HomeKit's SwingMode toggle (all supported axes at once) has no
-    // Matter counterpart Apple Home shows, so it is a switch of its own.
-    if (this.supportsSwingVertical || this.supportsSwingHorizontal) {
-      parts.push(this.swingPart('swing', names.swing, () => this.isSwinging(),
-        (on) => device.setSwing(on && this.supportsSwingVertical, on && this.supportsSwingHorizontal)));
-    }
-    if (platform.isSwingSwitchesEnabled(device.IP)) {
-      if (this.supportsSwingVertical) {
-        parts.push(this.swingPart('swing-vertical', names.verticalSwing, () => device.getSwingVertical(),
-          (on) => device.setSwing(on, device.getSwingHorizontal())));
-      }
-      if (this.supportsSwingHorizontal) {
-        parts.push(this.swingPart('swing-horizontal', names.horizontalSwing, () => device.getSwingHorizontal(),
-          (on) => device.setSwing(device.getSwingVertical(), on)));
-      }
-    }
-
     this.accessory = {
       UUID: this.UUID,
       displayName,
@@ -212,19 +192,71 @@ export default class ClimateMatterAccessory {
       firmwareRevision: device.getFirmwareVersion() || 'Unknown',
       context: { ip: device.IP, mac },
       clusters,
-      parts,
       // Power is the thermostat's system mode (Off / a mode), as on HomeKit's
       // Active + mode pair.
       handlers: {
         thermostat: {
-          systemModeChange: ({ systemMode }) => this.setSystemMode(systemMode),
+          systemModeChange: ({ systemMode }) => this.serial(() => this.setSystemMode(systemMode)),
           occupiedCoolingSetpointChange: ({ occupiedCoolingSetpoint }) =>
-            this.setSetpoint(occupiedCoolingSetpoint, CLIMATE_MODE_COOLING),
+            this.serial(() => this.setSetpoint(occupiedCoolingSetpoint, CLIMATE_MODE_COOLING)),
           occupiedHeatingSetpointChange: ({ occupiedHeatingSetpoint }) =>
-            this.setSetpoint(occupiedHeatingSetpoint, CLIMATE_MODE_HEATING),
+            this.serial(() => this.setSetpoint(occupiedHeatingSetpoint, CLIMATE_MODE_HEATING)),
         },
       },
     };
+
+    // One bridged accessory per role: the name is the only one Apple Home shows.
+    const companion = (role: string, name: string, deviceType: MatterAccessory['deviceType'],
+      extra: Pick<MatterAccessory, 'clusters' | 'handlers'>): MatterAccessory => ({
+      UUID: matter.uuid.generate(`${mac}:${role}`),
+      // The role is what tells the tiles apart, so the unit's name gives way.
+      displayName: fitLabel(`${fitLabel(displayName, NODE_LABEL_MAX_BYTES - Buffer.byteLength(` ${name}`))} ${name}`),
+      deviceType,
+      serialNumber: `${mac}-${role}`,
+      manufacturer: 'Daikin ' + device.getDeviceReg(),
+      model: device.getDeviceType() || 'Unknown',
+      firmwareRevision: device.getFirmwareVersion() || 'Unknown',
+      context: { ip: device.IP, mac, role },
+      ...extra,
+    });
+
+    this.fanAccessory = companion('fan', names.fan, matter.deviceTypes.Fan, {
+      clusters: { fanControl: { ...this.fanState(), fanModeSequence: FAN_MODE_SEQUENCE_OFF_LOW_MED_HIGH } },
+      handlers: {
+        fanControl: {
+          fanModeChange: ({ fanMode }) => this.serial(() => this.setFanMode(fanMode)),
+          percentSettingChange: ({ percentSetting }) => this.serial(() => this.setFanPercent(percentSetting)),
+        },
+      },
+    });
+    if (device.supportsIndoorHumidity()) {
+      this.humidityAccessory = companion('humidity', names.humidity, matter.deviceTypes.HumiditySensor, {
+        clusters: { relativeHumidityMeasurement: this.humidityState() },
+      });
+    }
+    if (device.supportsOutdoorTemperature()) {
+      this.outdoorAccessory = companion('outdoor', names.outdoorTemperature, matter.deviceTypes.TemperatureSensor, {
+        clusters: { temperatureMeasurement: this.outdoorState() ?? { measuredValue: null } },
+      });
+    }
+    // HomeKit's SwingMode toggle: every supported axis at once.
+    if (platform.isMatterSwingEnabled(device.IP) && (this.supportsSwingVertical || this.supportsSwingHorizontal)) {
+      this.swingAccessory = companion('swing', names.swing, matter.deviceTypes.OnOffOutlet, {
+        clusters: { onOff: { onOff: this.isSwinging() } },
+        handlers: {
+          onOff: {
+            on: () => this.serial(() => this.setSwingOn(true)),
+            off: () => this.serial(() => this.setSwingOn(false)),
+          },
+        },
+      });
+    }
+  }
+
+  // Every accessory of this unit, for registration.
+  public get accessories(): MatterAccessory[] {
+    return [this.accessory, this.fanAccessory, this.humidityAccessory, this.outdoorAccessory, this.swingAccessory]
+      .filter((accessory): accessory is MatterAccessory => accessory !== undefined);
   }
 
   // Force Homebridge to rebuild a cached accessory whose thermostat features
@@ -283,25 +315,31 @@ export default class ClimateMatterAccessory {
     return min > 0 && max > min ? [min, max] : [10, 30];
   }
 
-  private swingPart(id: string, name: string, get: () => boolean, set: (on: boolean) => Promise<boolean>)
-    : NonNullable<MatterAccessory['parts']>[number] {
-    return {
-      id,
-      displayName: name,
-      deviceType: this.platform.api.matter!.deviceTypes.OnOffOutlet,
-      clusters: { onOff: { onOff: get() } },
-      handlers: {
-        onOff: {
-          on: async () => check(await set(true)),
-          off: async () => check(await set(false)),
-        },
-      },
-    };
+  private serial(command: () => Promise<void>): Promise<void> {
+    const next = this.queue.then(command);
+    this.queue = next.catch(() => undefined);
+    return next;
   }
 
+  private async powerOn() {
+    if (!this.device.getPowerStatus()) {
+      check(await this.device.setPowerStatus(true));
+    }
+  }
+
+  // Every supported axis at once, like HomeKit's SwingMode; switching it on
+  // while the unit is off starts the unit.
+  private async setSwingOn(on: boolean) {
+    if (on) {
+      await this.powerOn();
+    }
+    check(await this.device.setSwing(on && this.supportsSwingVertical, on && this.supportsSwingHorizontal));
+  }
+
+  // Off while the unit is off, whatever the vane setting.
   private isSwinging(): boolean {
-    return (this.supportsSwingVertical && this.device.getSwingVertical())
-      || (this.supportsSwingHorizontal && this.device.getSwingHorizontal());
+    return this.device.getPowerStatus() && ((this.supportsSwingVertical && this.device.getSwingVertical())
+      || (this.supportsSwingHorizontal && this.device.getSwingHorizontal()));
   }
 
   private thermostatState(): Record<string, unknown> {
@@ -363,8 +401,10 @@ export default class ClimateMatterAccessory {
       : this.supportsCool ? CLIMATE_MODE_COOLING : CLIMATE_MODE_HEATING];
   }
 
+  // Off while the unit is off, and (HomeKit's Fan semantics) at the unit's
+  // automatic speed.
   private fanState(): { fanMode: number; percentSetting: number; percentCurrent: number } {
-    const step = this.device.getFanSpeedNumber();
+    const step = this.device.getPowerStatus() ? this.device.getFanSpeedNumber() : 0;
     const percent = Math.round(step * 100 / FAN_STEPS);
     const fanMode = step === 0 ? FAN_MODE_OFF : percent <= 33 ? FAN_MODE_LOW : percent <= 67 ? FAN_MODE_MEDIUM : FAN_MODE_HIGH;
     return { fanMode, percentSetting: percent, percentCurrent: percent };
@@ -387,8 +427,8 @@ export default class ClimateMatterAccessory {
     return Number.isFinite(watts) ? Math.round(watts * 1000) : null;
   }
 
-  private update(cluster: string, attributes: Record<string, unknown>, partId?: string) {
-    this.platform.api.matter?.updateAccessoryState(this.UUID, cluster, attributes, partId)
+  private update(cluster: string, attributes: Record<string, unknown>, uuid = this.UUID) {
+    this.platform.api.matter?.updateAccessoryState(uuid, cluster, attributes)
       .catch((e) => this.platform.log.debug(`Matter: '${this.accessory.displayName}' ${cluster} update failed: ${e}`));
   }
 
@@ -399,25 +439,17 @@ export default class ClimateMatterAccessory {
     if (step !== 0) {
       this.lastFanStep = step;
     }
-    const partIds = this.accessory.parts!.map((part) => part.id);
-
     this.update('thermostat', this.thermostatState());
-    this.update('fanControl', this.fanState(), 'fan');
-    if (partIds.includes('humidity')) {
-      this.update('relativeHumidityMeasurement', this.humidityState(), 'humidity');
+    this.update('fanControl', this.fanState(), this.fanAccessory.UUID);
+    if (this.humidityAccessory) {
+      this.update('relativeHumidityMeasurement', this.humidityState(), this.humidityAccessory.UUID);
     }
     const outdoor = this.outdoorState();
-    if (outdoor && partIds.includes('outdoor-temperature')) {
-      this.update('temperatureMeasurement', outdoor, 'outdoor-temperature');
+    if (outdoor && this.outdoorAccessory) {
+      this.update('temperatureMeasurement', outdoor, this.outdoorAccessory.UUID);
     }
-    if (partIds.includes('swing')) {
-      this.update('onOff', { onOff: this.isSwinging() }, 'swing');
-    }
-    if (partIds.includes('swing-vertical')) {
-      this.update('onOff', { onOff: this.device.getSwingVertical() }, 'swing-vertical');
-    }
-    if (partIds.includes('swing-horizontal')) {
-      this.update('onOff', { onOff: this.device.getSwingHorizontal() }, 'swing-horizontal');
+    if (this.swingAccessory) {
+      this.update('onOff', { onOff: this.isSwinging() }, this.swingAccessory.UUID);
     }
     if (this.metered) {
       this.update('electricalPowerMeasurement', { activePower: this.activePower() });
@@ -491,10 +523,11 @@ export default class ClimateMatterAccessory {
   }
 
   // Same as the HomeKit thresholds: in Auto either end of the range moves the
-  // single Auto target; otherwise the setpoint of the running mode is the
-  // unit's target. The idle setpoint is not a unit setting (matter.js may
-  // also move it on its own to keep the dead band), so writes to it are
-  // reverted by the next refresh.
+  // single Auto target; in a mode shown as another (fan, dry, ...) the unit
+  // switches to the setpoint's mode; otherwise the setpoint of the running
+  // mode is the unit's target. The idle setpoint is not a unit setting
+  // (matter.js may also move it on its own to keep the dead band), so writes
+  // to it are reverted by the next refresh.
   private async setSetpoint(value: number, setpointMode: string) {
     const reported = this.thermostatState()[setpointMode === CLIMATE_MODE_COOLING ? 'occupiedCoolingSetpoint' : 'occupiedHeatingSetpoint'];
     if (value === reported) {
@@ -507,6 +540,10 @@ export default class ClimateMatterAccessory {
       target = celsius + (setpointMode === CLIMATE_MODE_HEATING ? AUTO_SETPOINT_OFFSET : -AUTO_SETPOINT_OFFSET);
     } else if (mode === setpointMode) {
       target = celsius;
+    } else if (this.reportedSystemMode(mode) !== SYSTEM_MODE_BY_MODE[mode]) {
+      check(await this.device.setOperationMode(setpointMode));
+      check(await this.device.setTargetTemperature(celsius));
+      return;
     } else {
       return;
     }
@@ -526,8 +563,9 @@ export default class ClimateMatterAccessory {
     }
   }
 
-  // HomeKit Fan semantics: off = the unit's automatic speed, on = back to
-  // the last explicit speed.
+  // HomeKit Fan semantics — off = the unit's automatic speed, on = back to
+  // the last explicit speed — except that the fan reads off while the unit
+  // is off, and switching it on then starts the unit.
   private async setFanMode(fanMode: number) {
     if (fanMode === this.fanState().fanMode) {
       return;
@@ -535,11 +573,12 @@ export default class ClimateMatterAccessory {
     if (fanMode === FAN_MODE_OFF) {
       return this.setFanStep(0);
     }
+    await this.powerOn();
+    if (STEP_BY_FAN_MODE[fanMode] !== undefined && this.fanState().fanMode !== fanMode) {
+      return this.setFanStep(STEP_BY_FAN_MODE[fanMode]);
+    }
     if (this.device.getFanSpeedNumber() === 0) {
       return this.setFanStep(this.lastFanStep);
-    }
-    if (fanMode !== FAN_MODE_ON && STEP_BY_FAN_MODE[fanMode] !== undefined) {
-      return this.setFanStep(STEP_BY_FAN_MODE[fanMode]);
     }
   }
 
@@ -547,6 +586,10 @@ export default class ClimateMatterAccessory {
     if (percent === null || percent === this.fanState().percentSetting) {
       return;
     }
-    await this.setFanStep(percent === 0 ? 0 : clamp(Math.round(percent * FAN_STEPS / 100), [1, FAN_STEPS]));
+    if (percent === 0) {
+      return this.setFanStep(0);
+    }
+    await this.powerOn();
+    await this.setFanStep(clamp(Math.round(percent * FAN_STEPS / 100), [1, FAN_STEPS]));
   }
 }

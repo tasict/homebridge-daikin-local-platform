@@ -124,6 +124,11 @@ export default class DaikinPlatform implements DynamicPlatformPlugin {
     return this.configListHas(this.platformConfig.climateMatter, ip) ? 'matter' : 'hap';
   }
 
+  // True when the unit gets a separate Matter swing switch (climateMatterSwing).
+  isMatterSwingEnabled(ip: string | undefined): boolean {
+    return this.configListHas(this.platformConfig.climateMatterSwing, ip);
+  }
+
   async checkDevices() {
 
     if (!this.platformConfig.climateIPs || this.platformConfig.climateIPs.length === 0) {
@@ -274,7 +279,7 @@ export default class DaikinPlatform implements DynamicPlatformPlugin {
 
     for (let attempt = 1; ; attempt++) {
       try {
-        await this.api.matter!.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, climates.map((m) => m.accessory));
+        await this.api.matter!.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, climates.flatMap((m) => m.accessories));
         // A migrating unit's HomeKit accessory already polls the device.
         climates.forEach((m) => m.start(this.resolveProtocol(m.accessory.context.ip as string) === 'matter'));
         return;
@@ -310,7 +315,10 @@ export default class DaikinPlatform implements DynamicPlatformPlugin {
 
     for (const cached of this.matterAccessories.values()) {
       const ip = cached.context?.ip as string | undefined;
-      if (this.resolveProtocol(ip) !== 'hap' && this.configListHas(this.platformConfig.climateIPs, ip)) {
+      // The unit's companion accessories (fan, sensors, swing) go with it;
+      // swing also when its option was switched off.
+      const wanted = cached.context?.role === 'swing' ? this.isMatterSwingEnabled(ip) : true;
+      if (wanted && this.resolveProtocol(ip) !== 'hap' && this.configListHas(this.platformConfig.climateIPs, ip)) {
         continue;
       }
       this.log.info(`Removing Matter accessory '${cached.displayName}' because it is no longer published over Matter.`);

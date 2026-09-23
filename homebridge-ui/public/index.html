@@ -200,6 +200,7 @@
   let orphanSwingSwitches = [];     // climateSwingSwitches entries matching no device
   let orphanMatter = [];            // climateMatter entries matching no device
   let orphanMatterMigration = [];   // climateMatterMigration entries matching no device
+  let orphanMatterSwing = [];       // climateMatterSwing entries matching no device
   let matterInfo = { mainBridgeMatterEnabled: false, pairing: null };
   let childBridge = null;           // the config's _bridge block (child-bridge mode), if any
   let initialProtocol = 'hap';      // first-setup choice, used while no unit is configured
@@ -381,6 +382,17 @@
       delete config.climateMatterMigration;
     }
 
+    const matterSwingEntries = deviceRows
+      .filter((row) => row.value.trim() !== '' && row.matterSwing === true)
+      .map((row) => row.value.trim())
+      .concat(orphanMatterSwing);
+
+    if (matterSwingEntries.length > 0) {
+      config.climateMatterSwing = matterSwingEntries;
+    } else {
+      delete config.climateMatterSwing;
+    }
+
     // Child bridge: Homebridge 2.4 switches HAP and Matter per bridge, so
     // follow the units — Matter on while any unit uses it, HAP off once
     // every unit is Matter only (one pairing code instead of two). Other
@@ -450,6 +462,7 @@
     adoptOrphanFlag(orphanSwingSwitches, row, 'swingSwitches');
     adoptOrphanFlag(orphanMatter, row, 'matter');
     adoptOrphanFlag(orphanMatterMigration, row, 'matterMigration');
+    adoptOrphanFlag(orphanMatterSwing, row, 'matterSwing');
   }
 
   // The inverse, for removing a device: its key survives as a visible
@@ -457,31 +470,42 @@
   // unit in the ceiling) and its cooling-only / swing-switches / Matter flags ride
   // along invisibly, all re-adopted if the device comes back. Deleting a key
   // is always its own explicit action on the orphan row.
-  function stashOrphans(value, key, coolOnly, swingSwitches, matter, matterMigration) {
-    const ip = String(value || '').trim();
+  function stashOrphans(row) {
+    const ip = String(row.value || '').trim();
     if (ip === '') {
       return;
     }
+    const key = (row.key || '').trim();
     if (key) {
       orphanKeys.push({ ip: ip, key: key });
     }
-    if (coolOnly) {
-      orphanCoolingOnly.push(ip);
-    }
-    if (swingSwitches) {
-      orphanSwingSwitches.push(ip);
-    }
-    if (matter) {
-      orphanMatter.push(ip);
-    }
-    if (matterMigration) {
-      orphanMatterMigration.push(ip);
-    }
+    [
+      [row.coolOnly, orphanCoolingOnly],
+      [row.swingSwitches, orphanSwingSwitches],
+      [row.matter, orphanMatter],
+      [row.matterMigration, orphanMatterMigration],
+      [row.matterSwing, orphanMatterSwing],
+    ].forEach(([flag, list]) => {
+      if (flag === true) {
+        list.push(ip);
+      }
+    });
   }
+
+  // What Cancel/Esc restores and what a removed row leaves behind.
+  const snapshotRow = (row) => ({
+    value: row.value,
+    key: row.key,
+    coolOnly: row.coolOnly === true,
+    swingSwitches: row.swingSwitches === true,
+    matter: row.matter === true,
+    matterMigration: row.matterMigration === true,
+    matterSwing: row.matterSwing === true,
+  });
 
   function removeDeviceRow(index) {
     const row = deviceRows[index];
-    stashOrphans(row.value, rowKey(row), row.coolOnly === true, row.swingSwitches === true, row.matter === true, row.matterMigration === true);
+    stashOrphans(row);
     deviceRows.splice(index, 1);
     renderDevices();
     sync();
@@ -638,7 +662,7 @@
       if (row.value === '') {
         // Emptying the IP removes the device; a key it had before this edit
         // survives as an orphan row under its previous address.
-        stashOrphans(orig.value, (orig.key || '').trim(), orig.coolOnly === true, orig.swingSwitches === true, orig.matter === true, orig.matterMigration === true);
+        stashOrphans(orig);
         deviceRows.splice(index, 1);
       } else {
         adoptOrphanKey(row);
@@ -669,6 +693,11 @@
         delete row.swingSwitches;
       }
       setMatterChoice(row, orig.matter ? 'matter' : orig.matterMigration ? 'migrate' : 'hap');
+      if (orig.matterSwing) {
+        row.matterSwing = true;
+      } else {
+        delete row.matterSwing;
+      }
       clearEditState();
       if (row.value.trim() === '') {
         deviceRows.splice(index, 1);
@@ -738,7 +767,7 @@
       // Remove the device as it was before the edit: half-typed values are
       // discarded, and a pre-existing key survives as an orphan row.
       const orig = row.orig || {};
-      stashOrphans(orig.value, (orig.key || '').trim(), orig.coolOnly === true, orig.swingSwitches === true, orig.matter === true, orig.matterMigration === true);
+      stashOrphans(orig);
       deviceRows.splice(index, 1);
       renderDevices();
       sync();
@@ -881,8 +910,8 @@
     {
       const matter = optionRow('Matter (Beta)',
         'Publish this unit over Matter, so the Apple Home app (iOS 27+) can show '
-        + 'its electricity use. It works the same as in HomeKit, with the fan, '
-        + 'swing and sensors as separate tiles. Choose "HomeKit + Matter" first: '
+        + 'its electricity use. It works the same as in HomeKit; the fan and the '
+        + 'sensors become accessories of their own, named after the unit. Choose "HomeKit + Matter" first: '
         + 'the unit then shows up twice so you can give the Matter one its room '
         + 'and automations while the HomeKit one keeps working; switch to '
         + '"Matter" afterwards to remove the HomeKit one. Takes effect after a restart.');
@@ -898,12 +927,33 @@
         select.appendChild(option);
       }
       select.value = matterChoice(row);
-      select.addEventListener('change', () => {
-        setMatterChoice(row, select.value);
-        sync();
-      });
       matter.opt.appendChild(select);
       options.appendChild(matter.opt);
+
+      // Matter swing switch: its own accessory (see climate-matter.ts), so
+      // opt-in; only meaningful while the unit uses Matter.
+      const swingOpt = optionRow('Matter swing switch',
+        'Add a separate Swing switch for this unit in the Apple Home app — Matter '
+        + 'offers no swing control of its own. Apple Home shows it as an outlet; '
+        + 'Display As can change that. Units without swing-capable vanes get none.');
+      const swingSwitch = switchControl(row.matterSwing === true, 'Matter swing switch');
+      swingSwitch.input.addEventListener('change', () => {
+        if (swingSwitch.input.checked) {
+          row.matterSwing = true;
+        } else {
+          delete row.matterSwing;
+        }
+        sync();
+      });
+      swingOpt.opt.appendChild(swingSwitch.label);
+      swingOpt.opt.style.display = matterChoice(row) === 'hap' ? 'none' : '';
+      options.appendChild(swingOpt.opt);
+
+      select.addEventListener('change', () => {
+        setMatterChoice(row, select.value);
+        swingOpt.opt.style.display = select.value === 'hap' ? 'none' : '';
+        sync();
+      });
     }
 
     return { form, ipInput, keyInput };
@@ -994,7 +1044,7 @@
 
       const startEditing = (focusKeyField) => {
         row.editing = true;
-        row.orig = { value: row.value, key: row.key, coolOnly: row.coolOnly === true, swingSwitches: row.swingSwitches === true, matter: row.matter === true, matterMigration: row.matterMigration === true };
+        row.orig = snapshotRow(row);
         row.editSecure = Boolean(info && info.secure) || rowKey(row) !== '';
         if (focusKeyField) {
           row.focusKey = true;
@@ -1120,7 +1170,7 @@
       row.editing = true;
       row.editSecure = true;
       row.focusKey = true;
-      row.orig = { value: row.value, key: row.key, coolOnly: row.coolOnly === true, swingSwitches: row.swingSwitches === true, matter: row.matter === true, matterMigration: row.matterMigration === true };
+      row.orig = snapshotRow(row);
       homebridge.toast.warning(`${device.name || device.ip} is a secure adapter — enter its 13-digit key, then save.`, 'Key required');
     } else {
       homebridge.toast.success(`${device.name || device.ip} added — remember to save.`, 'Device added');
@@ -1361,6 +1411,7 @@
   loadFlagList(config.climateSwingSwitches, 'swingSwitches', orphanSwingSwitches);
   loadFlagList(config.climateMatter, 'matter', orphanMatter);
   loadFlagList(config.climateMatterMigration, 'matterMigration', orphanMatterMigration);
+  loadFlagList(config.climateMatterSwing, 'matterSwing', orphanMatterSwing);
 
   nameValue = typeof config.name === 'string' && config.name !== '' ? config.name : defaultName;
   debugValue = config.debugMode === true;

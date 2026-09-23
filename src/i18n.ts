@@ -14,9 +14,12 @@ export interface ServiceNames {
   // Per-axis swing switches (climateSwingSwitches option).
   verticalSwing: string;
   horizontalSwing: string;
-  // All-axes swing switch of Matter accessories (HAP has the SwingMode
-  // characteristic instead, which Apple Home shows no Matter equivalent of).
+  // Matter accessories named "<unit> <role>" (in HomeKit these are services
+  // of the unit's own accessory): the all-axes swing switch (HAP has the
+  // SwingMode characteristic instead), the fan and the humidity sensor.
   swing: string;
+  fan: string;
+  humidity: string;
 }
 
 export type ServiceNameKey = keyof ServiceNames;
@@ -29,6 +32,8 @@ const SERVICE_NAMES: Record<string, ServiceNames> = {
     verticalSwing: 'Вертикално люлеене',
     horizontalSwing: 'Хоризонтално люлеене',
     swing: 'Люлеене',
+    fan: 'Вентилатор',
+    humidity: 'Влажност',
   },
   'ca': {
     airConditioner: 'Aire condicionat',
@@ -36,6 +41,8 @@ const SERVICE_NAMES: Record<string, ServiceNames> = {
     verticalSwing: 'Oscil·lació vertical',
     horizontalSwing: 'Oscil·lació horitzontal',
     swing: 'Oscil·lació',
+    fan: 'Ventilador',
+    humidity: 'Humitat',
   },
   'zh-CN': {
     airConditioner: '空调',
@@ -43,6 +50,8 @@ const SERVICE_NAMES: Record<string, ServiceNames> = {
     verticalSwing: '垂直摆动',
     horizontalSwing: '水平摆动',
     swing: '摆动',
+    fan: '风扇',
+    humidity: '湿度',
   },
   'zh-TW': {
     airConditioner: '空調',
@@ -50,6 +59,8 @@ const SERVICE_NAMES: Record<string, ServiceNames> = {
     verticalSwing: '垂直擺動',
     horizontalSwing: '水平擺動',
     swing: '擺動',
+    fan: '風扇',
+    humidity: '濕度',
   },
   'cs': {
     airConditioner: 'Klimatizace',
@@ -57,6 +68,8 @@ const SERVICE_NAMES: Record<string, ServiceNames> = {
     verticalSwing: 'Vertikální natáčení',
     horizontalSwing: 'Horizontální natáčení',
     swing: 'Natáčení',
+    fan: 'Ventilátor',
+    humidity: 'Vlhkost',
   },
   'nl': {
     airConditioner: 'Airco',
@@ -64,6 +77,8 @@ const SERVICE_NAMES: Record<string, ServiceNames> = {
     verticalSwing: 'Verticale zwenking',
     horizontalSwing: 'Horizontale zwenking',
     swing: 'Zwenking',
+    fan: 'Ventilator',
+    humidity: 'Luchtvochtigheid',
   },
   'en': {
     airConditioner: 'Air Conditioner',
@@ -71,6 +86,8 @@ const SERVICE_NAMES: Record<string, ServiceNames> = {
     verticalSwing: 'Vertical Swing',
     horizontalSwing: 'Horizontal Swing',
     swing: 'Swing',
+    fan: 'Fan',
+    humidity: 'Humidity',
   },
   'fi': {
     airConditioner: 'Ilmastointilaite',
@@ -78,6 +95,8 @@ const SERVICE_NAMES: Record<string, ServiceNames> = {
     verticalSwing: 'Pystysuuntainen kääntö',
     horizontalSwing: 'Vaakasuuntainen kääntö',
     swing: 'Kääntö',
+    fan: 'Tuuletin',
+    humidity: 'Kosteus',
   },
   'fr': {
     airConditioner: 'Climatiseur',
@@ -85,6 +104,8 @@ const SERVICE_NAMES: Record<string, ServiceNames> = {
     verticalSwing: 'Oscillation verticale',
     horizontalSwing: 'Oscillation horizontale',
     swing: 'Oscillation',
+    fan: 'Ventilateur',
+    humidity: 'Humidité',
   },
   'de': {
     airConditioner: 'Klimaanlage',
@@ -92,6 +113,8 @@ const SERVICE_NAMES: Record<string, ServiceNames> = {
     verticalSwing: 'Vertikales Schwenken',
     horizontalSwing: 'Horizontales Schwenken',
     swing: 'Schwenken',
+    fan: 'Ventilator',
+    humidity: 'Luftfeuchtigkeit',
   },
   'he': {
     airConditioner: 'מזגן',
@@ -99,6 +122,8 @@ const SERVICE_NAMES: Record<string, ServiceNames> = {
     verticalSwing: 'תנודה אנכית',
     horizontalSwing: 'תנודה אופקית',
     swing: 'תנודה',
+    fan: 'מאוורר',
+    humidity: 'לחות',
   },
   'hu': {
     airConditioner: 'Légkondicionáló',
@@ -106,6 +131,8 @@ const SERVICE_NAMES: Record<string, ServiceNames> = {
     verticalSwing: 'Függőleges legyezés',
     horizontalSwing: 'Vízszintes legyezés',
     swing: 'Legyezés',
+    fan: 'Ventilátor',
+    humidity: 'Páratartalom',
   },
   'id': {
     airConditioner: 'AC',
@@ -113,6 +140,8 @@ const SERVICE_NAMES: Record<string, ServiceNames> = {
     verticalSwing: 'Ayunan vertikal',
     horizontalSwing: 'Ayunan horizontal',
     swing: 'Ayunan',
+    fan: 'Kipas',
+    humidity: 'Kelembapan',
   },
   'it': {
     airConditioner: 'Condizionatore',
@@ -120,6 +149,8 @@ const SERVICE_NAMES: Record<string, ServiceNames> = {
     verticalSwing: 'Oscillazione verticale',
     horizontalSwing: 'Oscillazione orizzontale',
     swing: 'Oscillazione',
+    fan: 'Ventilatore',
+    humidity: 'Umidità',
   },
   'ja': {
     airConditioner: 'エアコン',
@@ -127,6 +158,8 @@ const SERVICE_NAMES: Record<string, ServiceNames> = {
     verticalSwing: '上下スイング',
     horizontalSwing: '左右スイング',
     swing: 'スイング',
+    fan: 'ファン',
+    humidity: '湿度',
   },
   'ko': {
     airConditioner: '에어컨',
@@ -134,6 +167,8 @@ const SERVICE_NAMES: Record<string, ServiceNames> = {
     verticalSwing: '상하 스윙',
     horizontalSwing: '좌우 스윙',
     swing: '스윙',
+    fan: '팬',
+    humidity: '습도',
   },
   'mk': {
     airConditioner: 'Клима уред',
@@ -141,6 +176,8 @@ const SERVICE_NAMES: Record<string, ServiceNames> = {
     verticalSwing: 'Вертикално нишање',
     horizontalSwing: 'Хоризонтално нишање',
     swing: 'Нишање',
+    fan: 'Вентилатор',
+    humidity: 'Влажност',
   },
   'no': {
     airConditioner: 'Klimaanlegg',
@@ -148,6 +185,8 @@ const SERVICE_NAMES: Record<string, ServiceNames> = {
     verticalSwing: 'Vertikal svinging',
     horizontalSwing: 'Horisontal svinging',
     swing: 'Svinging',
+    fan: 'Vifte',
+    humidity: 'Luftfuktighet',
   },
   'pl': {
     airConditioner: 'Klimatyzator',
@@ -155,6 +194,8 @@ const SERVICE_NAMES: Record<string, ServiceNames> = {
     verticalSwing: 'Wachlowanie pionowe',
     horizontalSwing: 'Wachlowanie poziome',
     swing: 'Wachlowanie',
+    fan: 'Wentylator',
+    humidity: 'Wilgotność',
   },
   'pt-BR': {
     airConditioner: 'Ar-condicionado',
@@ -162,6 +203,8 @@ const SERVICE_NAMES: Record<string, ServiceNames> = {
     verticalSwing: 'Oscilação vertical',
     horizontalSwing: 'Oscilação horizontal',
     swing: 'Oscilação',
+    fan: 'Ventilador',
+    humidity: 'Umidade',
   },
   'pt': {
     airConditioner: 'Ar condicionado',
@@ -169,6 +212,8 @@ const SERVICE_NAMES: Record<string, ServiceNames> = {
     verticalSwing: 'Oscilação vertical',
     horizontalSwing: 'Oscilação horizontal',
     swing: 'Oscilação',
+    fan: 'Ventilador',
+    humidity: 'Humidade',
   },
   'ru': {
     airConditioner: 'Кондиционер',
@@ -176,6 +221,8 @@ const SERVICE_NAMES: Record<string, ServiceNames> = {
     verticalSwing: 'Вертикальное качание',
     horizontalSwing: 'Горизонтальное качание',
     swing: 'Качание',
+    fan: 'Вентилятор',
+    humidity: 'Влажность',
   },
   'sl': {
     airConditioner: 'Klimatska naprava',
@@ -183,6 +230,8 @@ const SERVICE_NAMES: Record<string, ServiceNames> = {
     verticalSwing: 'Navpično nihanje',
     horizontalSwing: 'Vodoravno nihanje',
     swing: 'Nihanje',
+    fan: 'Ventilator',
+    humidity: 'Vlažnost',
   },
   'es': {
     airConditioner: 'Aire acondicionado',
@@ -190,6 +239,8 @@ const SERVICE_NAMES: Record<string, ServiceNames> = {
     verticalSwing: 'Oscilación vertical',
     horizontalSwing: 'Oscilación horizontal',
     swing: 'Oscilación',
+    fan: 'Ventilador',
+    humidity: 'Humedad',
   },
   'sv': {
     airConditioner: 'Luftkonditionering',
@@ -197,6 +248,8 @@ const SERVICE_NAMES: Record<string, ServiceNames> = {
     verticalSwing: 'Vertikal svängning',
     horizontalSwing: 'Horisontell svängning',
     swing: 'Svängning',
+    fan: 'Fläkt',
+    humidity: 'Luftfuktighet',
   },
   'th': {
     airConditioner: 'เครื่องปรับอากาศ',
@@ -204,6 +257,8 @@ const SERVICE_NAMES: Record<string, ServiceNames> = {
     verticalSwing: 'สวิงแนวตั้ง',
     horizontalSwing: 'สวิงแนวนอน',
     swing: 'สวิง',
+    fan: 'พัดลม',
+    humidity: 'ความชื้น',
   },
   'tr': {
     airConditioner: 'Klima',
@@ -211,6 +266,8 @@ const SERVICE_NAMES: Record<string, ServiceNames> = {
     verticalSwing: 'Dikey salınım',
     horizontalSwing: 'Yatay salınım',
     swing: 'Salınım',
+    fan: 'Fan',
+    humidity: 'Nem',
   },
   'uk': {
     airConditioner: 'Кондиціонер',
@@ -218,6 +275,8 @@ const SERVICE_NAMES: Record<string, ServiceNames> = {
     verticalSwing: 'Вертикальне гойдання',
     horizontalSwing: 'Горизонтальне гойдання',
     swing: 'Гойдання',
+    fan: 'Вентилятор',
+    humidity: 'Вологість',
   },
 };
 

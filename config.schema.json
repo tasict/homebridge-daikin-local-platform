@@ -60,6 +60,13 @@
           "type": "string"
         }
       },
+      "climateMatterSwing": {
+        "type": "array",
+        "description": "Units published over Matter that also get a separate Swing switch accessory (all vane axes at once), by IP exactly as written in climateIPs. Matter has no swing control the Apple Home app shows. Edited from the device list in the settings UI.",
+        "items": {
+          "type": "string"
+        }
+      },
       "language": {
         "title": "HomeKit Name Language",
         "description": "Language for the default HomeKit names of the switches and sensors this plugin creates (e.g. Outdoor Temperature, Vertical Swing, Horizontal Swing). Same options as the Homebridge UI language; the settings UI defaults it to the language selected there. Names changed in the Home app are never touched.",
