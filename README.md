@@ -33,12 +33,15 @@ Requires Homebridge 2.4 or later (Homebridge 1.x installations stay on plugin ve
 
 A Matter unit offers the same controls as its HomeKit accessory: power, the unit's modes (with *Cooling only* respected), temperatures, the fan (off = automatic speed, like in HomeKit), swing (plus the per-axis switches if enabled), and the humidity and outdoor temperature sensors. Apple Home shows the air conditioner itself as a thermostat, and the fan, swing and sensors as tiles of their own (the swing switches appear as outlets; *Display As* can change that).
 
-Moving to Matter (rooms, scenes and automations cannot be carried over — Apple Home keeps them in its own database):
+**New setup:** the plugin settings first ask how to connect to Apple Home — *HomeKit (HAP)* or *Matter* — and units you add follow that choice (each unit can still be changed in its edit form). Then restart Homebridge and pair the bridge in the Home app with the Matter code shown in the plugin settings, instead of the HomeKit code.
 
-1. Turn on Matter for the bridge the plugin runs on (the main bridge or the plugin's child bridge) in the Homebridge bridge settings, and restart Homebridge. Until then the plugin settings show no Matter options.
-2. In the plugin settings, *Matter* section, choose **Start migration for all units** (or set a single unit to *HomeKit + Matter* in its edit form) and restart Homebridge. Each unit is now in the Home app twice: the HomeKit accessory keeps working.
-3. Add the Matter bridge in the Home app with the code shown in the *Matter* section (one code for all units on that bridge), give each Matter accessory its room, and rebuild the scenes and automations that use the unit.
-4. Choose **Finish migration** and restart Homebridge: the HomeKit accessories of these units are removed.
+Matter has to be on for the bridge the plugin runs on. When the plugin runs as a child bridge (the Homebridge UI's default), the plugin settings take care of it: Matter is switched on for the child bridge while any unit uses it, and HomeKit is switched off once every unit is on Matter, so there is only one code to pair. On the main bridge, turn Matter on in the Homebridge settings; the plugin settings show a warning while it is off.
+
+**Moving an existing setup to Matter** (rooms, scenes and automations cannot be carried over — Apple Home keeps them in its own database):
+
+1. In the plugin settings, *Matter* section, choose **Start migration for all units** (or set a single unit to *HomeKit + Matter* in its edit form) and restart Homebridge. Each unit is now in the Home app twice: the HomeKit accessory keeps working.
+2. Add the Matter bridge in the Home app with the code shown in the *Matter* section (one code for all units on that bridge), give each Matter accessory its room, and rebuild the scenes and automations that use the unit.
+3. Choose **Finish migration** and restart Homebridge: the HomeKit accessories of these units are removed.
 
 Keep in mind:
 

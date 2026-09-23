@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.1 (2026-09-23)
+
+- Fixed: the Matter options were missing from the plugin settings when the plugin runs as a child bridge without Matter — the Homebridge UI's default for new plugins, and the usual case after upgrading from 1.5. They are now always shown.
+- A new setup now starts with a choice between *HomeKit (HAP)* and *Matter*; units added later follow it, and each unit can still be changed in its edit form.
+- When the plugin runs as a child bridge, the settings now switch Matter and HomeKit on or off for that bridge to match the units — HomeKit goes off once every unit is on Matter, so there is only one code to pair. On the main bridge, the settings warn while Matter is off there.
+
 ## 2.0.0 — Matter support
 
 > [!IMPORTANT]
