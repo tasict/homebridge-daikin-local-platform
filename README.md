@@ -31,7 +31,7 @@ Each configured unit appears as one accessory with:
 
 Requires Homebridge 2.4 or later (Homebridge 1.x installations stay on plugin version 1.5.1). Any unit can be published over **Matter** instead of HomeKit (HAP). The reason to do so is energy: the Apple Home app (iOS 27+) reads power and energy only from Matter, so units whose adapter meters consumption (newer dsiot units with the `en_ipower` function) then appear in the Home app's Energy view — both in the home total and individually. The plugin reports the live power draw and a running energy total built from the unit's own daily and monthly history; the total is kept in Homebridge's storage so it never goes backwards.
 
-A Matter unit offers the same controls as its HomeKit accessory: power, the unit's modes (with *Cooling only* respected), temperatures, the fan (off = automatic speed, like in HomeKit), swing (plus the per-axis switches if enabled), and the humidity and outdoor temperature sensors. Apple Home shows the air conditioner itself as a thermostat, and the fan, swing and sensors as tiles of their own (the swing switches appear as outlets; *Display As* can change that).
+A Matter unit offers the same controls as its HomeKit accessory: power, the unit's modes (with *Cooling only* respected), temperatures, the fan (off = automatic speed, like in HomeKit), and the humidity and outdoor temperature sensors. The fan and swing tiles show the running unit: they read off while the air conditioner is off, and switching either on starts it. Apple Home shows the air conditioner as a thermostat; the fan and the humidity and outdoor temperature sensors are accessories of their own, named after the unit (e.g. *Study Fan*, *Study Humidity*, *Study Outdoor Temperature*, in the plugin's HomeKit name language), because Apple Home ignores the names of tiles inside a Matter accessory. Matter has no swing control Apple Home shows, so swing is an opt-in *Matter swing switch* (in the unit's edit form, or `climateMatterSwing`): another accessory, *Study Swing*, that turns every vane axis on or off. Apple Home shows it as an outlet (*Display As* can change that). The per-axis swing switches (`climateSwingSwitches`) are HomeKit only. Matter limits names to 32 bytes, so a long unit name is shortened, keeping the part after it.
 
 **New setup:** the plugin settings first ask how to connect to Apple Home — *HomeKit (HAP)* or *Matter* — and units you add follow that choice (each unit can still be changed in its edit form). Then restart Homebridge and pair the bridge in the Home app with the Matter code shown in the plugin settings, instead of the HomeKit code.
 
@@ -81,6 +81,7 @@ In the settings UI, the device list scans your local network automatically (UDP 
         "climateSwingSwitches": ["ipv4-here"],
         "climateMatter": ["ipv4-here"],
         "climateMatterMigration": ["ipv4-here"],
+        "climateMatterSwing": ["ipv4-here"],
         "language": "en",
         "debugMode": false,
     }
@@ -112,6 +113,9 @@ Units that get separate *Vertical Swing* and *Horizontal Swing* switches in Home
 
 * `climateMatter` (array):
 Units published over Matter instead of HomeKit, by IP address exactly as written in `climateIPs` — see [Matter and energy (Beta)](#matter-and-energy-beta--new-in-200). Takes effect only while Matter is enabled on the plugin's bridge. In the Homebridge UI this is the *Matter (Beta)* option in the device's edit form.
+
+* `climateMatterSwing` (array):
+Units on Matter that also get a separate *Swing* switch accessory (every vane axis at once), by IP address exactly as written in `climateIPs`. In the Homebridge UI this is *Matter swing switch* in the device's edit form. Units without swing-capable vanes get none.
 
 * `climateMatterMigration` (array):
 Units published over both HomeKit and Matter while moving them to Matter (step 2 above), by IP address exactly as written in `climateIPs`. Takes precedence over `climateMatter`. In the Homebridge UI this is *HomeKit + Matter* in the device's edit form, or *Start migration for all units*.

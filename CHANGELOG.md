@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.0.2 (2026-09-23)
+
+- Fixed: over Matter, the Apple Home app showed an air conditioner as a power strip, with its tiles named *Outlet*, *Outlet 1*, ... — Apple Home ignores the names of tiles inside a Matter accessory. The fan and the humidity and outdoor temperature sensors are now accessories of their own, named after the unit (e.g. *Study Fan*, *Study Outdoor Temperature*, in the plugin's HomeKit name language). Swing is an opt-in *Matter swing switch* per unit (edit form, or the new `climateMatterSwing` config array): another accessory, *Study Swing*, that turns every vane axis on or off. The per-axis swing switches stay HomeKit only.
+- Fixed: a Matter accessory whose name was longer than 32 bytes failed to register. Names are now shortened to fit, keeping the part after the unit name.
+- Fixed over Matter: the fan and swing tiles showed *on* while the air conditioner was off. Both now read off while it is off, and switching either on starts it (the fan at its last speed). As in HomeKit, the fan tile reads off while the unit runs at its automatic speed, and switching it off selects the automatic speed.
+- Fixed over Matter: in fan or dry mode (shown as Auto, like in HomeKit), changing the temperature was ignored and snapped back; the unit now switches to cooling or heating with that temperature, as in HomeKit.
+- Commands from Matter controllers are now carried out one after another, so two arriving together (e.g. both ends of the temperature range) no longer race.
+
 ## 2.0.1 (2026-09-23)
 
 - Fixed: the Matter options were missing from the plugin settings when the plugin runs as a child bridge without Matter — the Homebridge UI's default for new plugins, and the usual case after upgrading from 1.5. They are now always shown.
