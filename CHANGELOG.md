@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.0.0 — Matter support
+
+> [!IMPORTANT]
+> **This release adds Matter support.** Any unit can now be published over Matter as well as HomeKit, with the same controls, and units that meter their consumption appear in the Apple Home app's Energy view (iOS 27+). Units stay on HomeKit until you switch them — see *Matter and energy (Beta)* in the README.
+>
+> **Requires Homebridge 2.4 or later and Node.js 22 or later.** Homebridge 1.x installations stay on 1.5.1.
+
+- Minimum versions raised to Homebridge 2.4 and Node.js 22: Homebridge and the Homebridge UI only offer this version to installations that meet both, so Homebridge 1.x installations stay on 1.5.1, which keeps working as before.
+- Added Matter support (Beta): a unit can be published over Matter instead of HomeKit, with the same controls as its HomeKit accessory — power, the unit's modes (*Cooling only* respected), temperatures, the fan (off = automatic speed), swing and the per-axis swing switches, and the humidity and outdoor temperature sensors. Units whose adapter meters consumption (dsiot `en_ipower`) also report their live power and energy use, which the Apple Home app (iOS 27+) shows in its Energy view. The energy total is built from the unit's daily and monthly history and stored in Homebridge's storage, so it keeps counting across restarts and year boundaries.
+- Moving to Matter without downtime: in the new *HomeKit + Matter* state a unit is published both ways, so its Matter accessory can get its room, scenes and automations while the HomeKit one keeps working; *Finish migration* then removes the HomeKit accessory. The *Matter* section of the settings has one-click *Start migration for all units* / *Finish migration* buttons, a step list, and the bridge's Matter pairing code and QR code. It and all other Matter options only appear while Matter is on for the plugin's bridge (switched on in the Homebridge bridge settings). New config arrays `climateMatter` and `climateMatterMigration` follow the `climateCoolingOnly` rules.
+- Changed: in Auto, the Home app's temperature range now adjusts the unit's Auto target (shown as target ± 1 °C) and the unit stays in Auto. Before, the range showed the Cool and Heat targets and moving it switched the unit out of Auto.
+- Fixed: while a unit is off, the Home app now shows the mode it will start in (before, the mode was only updated while the unit was on, so after a restart an off unit showed Auto). An off unit's tile also no longer keeps showing *Cooling*/*Heating* until it is opened, and a mode the tile does not offer (e.g. Auto set from the remote on a unit marked cooling-only) shows as one it does instead of an invalid value.
+- If Matter is turned off on the bridge later, units set to Matter go back to HomeKit (with a warning in the log); their setting is kept for when Matter is back on.
+
 ## 1.5.1 (2026-07-22)
 
 - Added a *HomeKit name language* setting: the default names of the switches and sensors this plugin creates — *Outdoor Temperature*, *Vertical Swing*, *Horizontal Swing* and the fallback accessory name — can now follow any of the 28 Homebridge UI languages, since HomeKit does not translate service names itself. The dropdown (settings UI → *Advanced*) offers the same options as the Homebridge UI language setting and defaults to the language the Homebridge UI is displayed in; in the JSON config it is the `language` field with the same codes (`en`, `de`, `ja`, `zh-TW`, ...; absent means English).
