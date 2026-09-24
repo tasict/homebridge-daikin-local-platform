@@ -201,7 +201,7 @@
   let orphanMatter = [];            // climateMatter entries matching no device
   let orphanMatterMigration = [];   // climateMatterMigration entries matching no device
   let orphanMatterSwing = [];       // climateMatterSwing entries matching no device
-  let matterInfo = { mainBridgeMatterEnabled: false, pairing: null };
+  let matterInfo = { mainBridgeMatterEnabled: false, cachedAccessories: 0, pairing: null };
   let childBridge = null;           // the config's _bridge block (child-bridge mode), if any
   let initialProtocol = 'hap';      // first-setup choice, used while no unit is configured
   let nameValue = defaultName;
@@ -228,6 +228,8 @@
     }
     return rows.every((row) => matterChoice(row) === 'matter') ? 'matter' : 'hap';
   };
+  // Same rule as Homebridge's isMatterConfigEnabled.
+  const matterFlagEnabled = (value) => Boolean(value) && value.enabled !== false;
   const setMatterChoice = (row, choice) => {
     delete row.matter;
     delete row.matterMigration;
@@ -397,12 +399,17 @@
     // follow the units — Matter on while any unit uses it, HAP off once
     // every unit is Matter only (one pairing code instead of two). Other
     // keys of both blocks are kept; switching off never clears a pairing.
+    // Matter also stays on — or is switched back on — while its cache still
+    // holds this plugin's accessories: the plugin can only remove them from
+    // the Home app while Matter runs, so switching it off together with the
+    // units' way back to HomeKit strands them there as "No Response".
     if (config._bridge && typeof config._bridge === 'object') {
       const choices = configuredRows().map(matterChoice);
       if (choices.length === 0) {
         choices.push(initialProtocol);
       }
-      const needMatter = choices.some((choice) => choice !== 'hap');
+      const cleanupPending = matterInfo.cachedAccessories > 0;
+      const needMatter = cleanupPending || choices.some((choice) => choice !== 'hap');
       const needHap = choices.some((choice) => choice !== 'matter');
       const block = (value) => (value && typeof value === 'object' ? value : {});
       if (needMatter || config._bridge.matter !== undefined) {
@@ -1234,7 +1241,34 @@
       || (configuredRows().length === 0 && initialProtocol === 'matter');
     const bridgeNote = document.createElement('div');
     bridgeNote.className = 'small mb-2';
-    if (childBridge) {
+    if (!wantsMatter && matterInfo.cachedAccessories > 0 && !childBridge && !matterInfo.mainBridgeMatterEnabled) {
+      // Stranded on the main bridge: only Homebridge's own setting helps.
+      bridgeNote.className = 'dlp-invalid-hint mb-2';
+      bridgeNote.textContent = `${matterInfo.cachedAccessories} Matter accessories of this plugin are left over while `
+        + 'Matter is off on the main Homebridge bridge, so they show as No Response in the Home app. Turn Matter on '
+        + 'for the main bridge for one restart and the plugin removes them.';
+    } else if (!wantsMatter && matterInfo.cachedAccessories > 0) {
+      // Back on HomeKit, Matter accessories still to be removed.
+      bridgeNote.textContent = `No unit uses Matter any more. Save and restart Homebridge: the plugin then removes `
+        + `its ${matterInfo.cachedAccessories} Matter accessories from the Home app`
+        + (childBridge ? ' (Matter stays on, or is switched back on, for this child bridge until then). ' : '. ')
+        + (childBridge ? 'Afterwards remove the then empty Matter bridge in the Home app.' : '');
+    } else if (!wantsMatter && childBridge && matterFlagEnabled(childBridge.matter)) {
+      // Cleanup done: Matter can go off; any save switches it off (sync()).
+      bridgeNote.textContent = 'No unit uses Matter and its accessories are gone. If this child bridge is still '
+        + 'listed in the Home app, remove it there. Matter is switched off for this bridge with the next save.';
+      const off = document.createElement('button');
+      off.type = 'button';
+      off.className = 'btn btn-sm btn-outline-secondary mt-1 d-block';
+      off.textContent = 'Switch Matter off for this bridge';
+      off.addEventListener('click', () => {
+        sync();
+        homebridge.toast.info('Save and restart Homebridge to switch Matter off.', 'Matter');
+      });
+      matterBridgeHost.appendChild(bridgeNote);
+      matterBridgeHost.appendChild(off);
+      return renderMatterUnits(wantsMatter);
+    } else if (childBridge) {
       bridgeNote.textContent = 'This plugin runs as a child bridge: Matter (and HomeKit) are switched on for it '
         + 'automatically to match the units. Save and restart Homebridge after changing a unit.';
     } else if (wantsMatter && !matterInfo.mainBridgeMatterEnabled) {
@@ -1247,13 +1281,17 @@
         : 'Units stay on HomeKit until you switch them to Matter.';
     }
     matterBridgeHost.appendChild(bridgeNote);
+    renderMatterUnits(wantsMatter);
+  }
 
+  function renderMatterUnits(wantsMatter) {
     // Bulk migration: every HomeKit unit to "HomeKit + Matter", then every
-    // migrating unit on to Matter only.
+    // migrating unit on to Matter only — or all of them back to HomeKit.
     const configured = deviceRows.filter((row) => row.value.trim() !== '');
     const hapRows = configured.filter((row) => matterChoice(row) === 'hap');
     const migratingRows = configured.filter((row) => matterChoice(row) === 'migrate');
-    if (hapRows.length + migratingRows.length > 0) {
+    const matterRows = configured.filter((row) => matterChoice(row) !== 'hap');
+    if (hapRows.length + migratingRows.length > 0 || matterRows.length > 0) {
       const steps = document.createElement('ol');
       steps.className = 'small mb-2';
       steps.style.paddingLeft = '1.3em';
@@ -1290,6 +1328,10 @@
         'Save and restart Homebridge, then set up the Matter accessories in the Home app.');
       bulk('Finish migration', 'btn-outline-primary', migratingRows, 'matter',
         'Save and restart Homebridge to remove the HomeKit accessories of these units.');
+      // The way out at any point: units still migrating keep their HomeKit
+      // accessory; units already on Matter only get a new one.
+      bulk('Back to HomeKit', 'btn-outline-secondary', matterRows, 'hap',
+        'Save and restart Homebridge: the Matter accessories are removed from the Home app.');
       matterMigrationHost.appendChild(buttons);
     }
 
