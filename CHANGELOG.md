@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.3 (2026-09-24)
+
+- Fixed: abandoning a move to Matter left the units' Matter accessories in the Apple Home app as *No Response*, with no way back to a clean HomeKit setup — on a child bridge the settings switched Matter off together with the last unit leaving it, so the plugin could never remove them. Matter now stays on (or is switched back on, which also repairs a setup already stuck this way) until the plugin has removed its Matter accessories, and is switched off with the next save after that. On the main bridge, where the plugin cannot change Matter, the settings say when to leave it on for a restart.
+- Added a *Back to HomeKit* button to the *Matter* section: it moves every unit on Matter, or still migrating, back to HomeKit in one step. Units that were still migrating keep their HomeKit accessory, rooms and automations.
+- The npm package no longer includes local development files.
+
 ## 2.0.2 (2026-09-23)
 
 - Fixed: over Matter, the Apple Home app showed an air conditioner as a power strip, with its tiles named *Outlet*, *Outlet 1*, ... — Apple Home ignores the names of tiles inside a Matter accessory. The fan and the humidity and outdoor temperature sensors are now accessories of their own, named after the unit (e.g. *Study Fan*, *Study Outdoor Temperature*, in the plugin's HomeKit name language). Swing is an opt-in *Matter swing switch* per unit (edit form, or the new `climateMatterSwing` config array): another accessory, *Study Swing*, that turns every vane axis on or off. The per-axis swing switches stay HomeKit only.

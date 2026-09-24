@@ -43,6 +43,8 @@ Matter has to be on for the bridge the plugin runs on. When the plugin runs as a
 2. Add the Matter bridge in the Home app with the code shown in the *Matter* section (one code for all units on that bridge), give each Matter accessory its room, and rebuild the scenes and automations that use the unit.
 3. Choose **Finish migration** and restart Homebridge: the HomeKit accessories of these units are removed.
 
+**Going back to HomeKit** works at any step: choose **Back to HomeKit** in the *Matter* section (or set units to *HomeKit* in their edit forms) and restart Homebridge. The plugin then removes its Matter accessories from the Home app; units that were still migrating keep their HomeKit accessory with its room and automations, units already on Matter only get a new one. This needs Matter to run for that one restart: on a child bridge the plugin settings keep Matter on (or switch it back on) until the Matter accessories are gone, then switch it off with the next save; on the main bridge, leave Matter on for that restart. Finally remove the now empty Matter bridge in the Home app.
+
 Keep in mind:
 
 * In Auto, Daikin units have a single target temperature. Both HomeKit and Matter show it as a 2 °C range around the target, and moving either end moves the target (the unit stays in Auto).
