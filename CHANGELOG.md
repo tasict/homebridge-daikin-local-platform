@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.0.4 (2026-09-25)
+
+- New project website in English, Traditional Chinese and Japanese: [tasict.github.io/homebridge-daikin-local-platform](https://tasict.github.io/homebridge-daikin-local-platform/). It is now the plugin's homepage in the Homebridge UI.
+- You can now support the plugin by buying me a boba (paid by card, no PayPal account needed) as well as with PayPal: from the bottom of the plugin settings, the donate link in the Homebridge UI, the README or GitHub's Sponsor button.
+- The npm package now contains only what the plugin needs to run.
+- README: the European BRP069C4x adapters are no longer listed as supported. They were already listed under *Cloud-only units*, which is correct.
+
 ## 2.0.3 (2026-09-24)
 
 - Fixed: abandoning a move to Matter left the units' Matter accessories in the Apple Home app as *No Response*, with no way back to a clean HomeKit setup — on a child bridge the settings switched Matter off together with the last unit leaving it, so the plugin could never remove them. Matter now stays on (or is switched back on, which also repairs a setup already stuck this way) until the plugin has removed its Matter accessories, and is switched off with the next save after that. On the main bridge, where the plugin cannot change Matter, the settings say when to leave it on for a restart.

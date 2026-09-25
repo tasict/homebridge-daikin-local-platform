@@ -58,7 +58,7 @@ Keep in mind:
 ## Supported devices
 The plugin auto-detects, per IP address, which of the two local protocols the unit speaks — no configuration needed:
 
-* **Newer adapters (firmware 2.8.0+)** using the JSON `/dsiot/multireq` API (e.g. BRP069C4x and recent built-in WiFi modules).
+* **Newer adapters (firmware 2.8.0+)** using the JSON `/dsiot/multireq` API, as found on recent built-in WiFi modules. Not every new adapter qualifies: some only work through Daikin's cloud (see *Cloud-only units* below).
 * **Legacy adapters** using the query-string API (`/common/basic_info`, `/aircon/get_control_info`, ...) — the same devices supported by the [Home Assistant Daikin integration](https://www.home-assistant.io/integrations/daikin/) via BRP069-style adapters (BRP069A/Bxx and built-in WiFi units of the same era). Set semantics follow [pydaikin](https://github.com/fredrike/pydaikin).
 * **AirBase (BRP15B61) adapters**, common on Australian ducted systems — same query-string API under a `skyfi/` path prefix, with the AirBase mode and 3-speed fan numbering. Zone control is not exposed yet.
 * **Secure BRP072C-style adapters** (external adapters such as the US BRP072C42, paired with the *Daikin Comfort Control* app) — same query-string API, but served only over HTTPS after registering the 13-digit key printed on the adapter sticker. Add the key via `climateKeys` (see below); everything else is auto-detected.
