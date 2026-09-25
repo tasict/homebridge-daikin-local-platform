@@ -27,6 +27,14 @@
     "node": "^22 || ^24 || ^26"
   },
   "main": "dist/index.js",
+  "files": [
+    "dist",
+    "!dist/test.*",
+    "!dist/energy-ledger-check.*",
+    "homebridge-ui",
+    "config.schema.json",
+    "CHANGELOG.md"
+  ],
   "scripts": {
     "clean": "rimraf ./dist",
     "lint": "eslint src/**.ts --max-warnings=0",
