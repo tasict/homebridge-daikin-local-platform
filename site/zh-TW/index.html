@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daikin Local Platform：透過 Homebridge 把大金冷氣接進 Apple「家庭」</title>
+<meta name="description" content="免費的 Homebridge 外掛，透過 HomeKit 或 Matter 把大金冷氣接進 Apple「家庭」App，直接在家裡的網路上控制。">
+<link rel="canonical" href="https://tasict.github.io/homebridge-daikin-local-platform/zh-TW/">
+<link rel="alternate" hreflang="en" href="https://tasict.github.io/homebridge-daikin-local-platform/">
+<link rel="alternate" hreflang="zh-TW" href="https://tasict.github.io/homebridge-daikin-local-platform/zh-TW/">
+<link rel="alternate" hreflang="ja" href="https://tasict.github.io/homebridge-daikin-local-platform/ja/">
+<link rel="alternate" hreflang="x-default" href="https://tasict.github.io/homebridge-daikin-local-platform/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Daikin Local Platform：透過 Homebridge 把大金冷氣接進 Apple「家庭」">
+<meta property="og:description" content="免費的 Homebridge 外掛，透過 HomeKit 或 Matter 把大金冷氣接進 Apple「家庭」App，直接在家裡的網路上控制。">
+<meta property="og:url" content="https://tasict.github.io/homebridge-daikin-local-platform/zh-TW/">
+<meta property="og:image" content="https://tasict.github.io/homebridge-daikin-local-platform/assets/og.png">
+<meta property="og:locale" content="zh_TW">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#f2f7fa" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d1a24" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="../assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../assets/icon.png">
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body>
+<header class="wrap masthead">
+  <a class="wordmark" href="./"><img src="../assets/icon.svg" alt="" width="30" height="30">Daikin Local Platform</a>
+  <a href="https://github.com/tasict/homebridge-daikin-local-platform">原始碼</a>
+  <a class="tip head-tip" href="https://tasict.bobaboba.me" aria-label="請我喝珍奶"><img src="../assets/boba.png" alt="" width="24" height="24"><span>請我喝珍奶</span></a>
+  <details class="lang">
+    <summary aria-label="語言"><svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7.5"/><path d="M2.5 10h15M10 2.5c2.2 2.3 3.2 4.8 3.2 7.5s-1 5.2-3.2 7.5c-2.2-2.3-3.2-4.8-3.2-7.5s1-5.2 3.2-7.5z"/></svg><span>繁體中文</span></summary>
+    <ul><li><a href="../" hreflang="en" lang="en">English</a></li><li><a href="../zh-TW/" hreflang="zh-TW" lang="zh-Hant-TW" aria-current="page">繁體中文</a></li><li><a href="../ja/" hreflang="ja" lang="ja">日本語</a></li></ul>
+  </details>
+</header>
+
+<main>
+<div class="wrap">
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="hero-copy">
+      <h1 id="hero-title">你的大金冷氣，<br>放進「家庭」App。</h1>
+      <p class="lede">這是一個 Homebridge 外掛，透過 HomeKit 或 Matter 把大金冷氣放進「家庭」App。它在家裡的網路上直接和每台冷氣溝通，中間不經過雲端。</p>
+      <div class="actions">
+        <a class="btn" href="#start">在 Homebridge 安裝</a>
+        <a href="https://github.com/tasict/homebridge-daikin-local-platform">在 GitHub 查看</a>
+      </div>
+      <p class="fine">免費、開放原始碼。需要 Homebridge 2.4 以上。</p>
+    </div>
+    <div class="room" data-demo data-mode="cool" data-t='{&quot;st&quot;:{&quot;off&quot;:&quot;關閉&quot;,&quot;cool&quot;:&quot;冷氣，設定 {t}&quot;,&quot;heat&quot;:&quot;暖氣，設定 {t}&quot;,&quot;auto&quot;:&quot;自動，{lo} 至 {hi}&quot;},&quot;now&quot;:&quot;室溫 {t}&quot;}'>
+      <svg class="unit" viewBox="0 0 480 250" role="img" aria-label="一台壁掛式冷氣，依選擇的模式吹出冷風或暖風。">
+      <rect class="unit-body" x="40" y="18" width="400" height="98" rx="28"/>
+      <rect class="unit-vent" x="84" y="88" width="312" height="11" rx="5.5"/>
+      <circle class="unit-led" cx="398" cy="46" r="5"/>
+      <g class="air">
+        <path d="M120 142q120 42 240 0"/>
+        <path d="M150 186q90 34 180 0"/>
+        <path d="M182 226q58 24 116 0"/>
+      </g>
+    </svg>
+      <div class="tile">
+        <div class="tile-head">
+          <span class="tile-icon"><svg viewBox="61 65 390 390" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M122 186 256 80 390 186" stroke-width="30"/><rect x="126" y="216" width="260" height="76" rx="22" fill="currentColor" stroke="none"/><path d="M160 332q96 38 192 0" stroke-width="22"/><path d="M184 384q72 32 144 0" stroke-width="22" opacity=".7"/><path d="M210 432q46 24 92 0" stroke-width="22" opacity=".45"/></svg></span>
+          <div class="tile-name"><strong>客廳</strong><span data-status aria-live="polite"></span></div>
+          <span class="tile-now" data-now></span>
+        </div>
+        <div class="dial">
+          <button type="button" class="step" data-step="-0.5" aria-label="調低溫度">&minus;</button>
+          <output class="target" data-target>24°</output>
+          <button type="button" class="step" data-step="0.5" aria-label="調高溫度">+</button>
+        </div>
+        <fieldset class="seg">
+          <legend>模式</legend>
+          <label><input type="radio" name="mode" value="off"><span>關閉</span></label><label><input type="radio" name="mode" value="cool" checked><span>冷氣</span></label><label><input type="radio" name="mode" value="heat"><span>暖氣</span></label><label><input type="radio" name="mode" value="auto"><span>自動</span></label>
+        </fieldset>
+      </div>
+      <p class="hint">試試看。每台冷氣在「家庭」App 裡都有這些控制項。</p>
+    </div>
+  </section>
+
+  <section class="band" aria-labelledby="h-local">
+    <div class="intro">
+      <h2 id="h-local">直接連到冷氣，全在你家網路裡</h2>
+      <p>外掛透過每台冷氣 Wi-Fi 模組的本機介面控制它。不需要大金帳號，網際網路斷線時冷氣照樣能操作。</p>
+    </div>
+    <ol class="flow">
+        <li class="node"><span class="node-icon"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M9.5 12 12 9.8l2.5 2.2M10.3 11.3v3.2h3.4v-3.2"/></svg></span><strong>「家庭」App</strong><small>iPhone、iPad、Mac 或 HomePod</small></li><li class="link" aria-hidden="true"><span>HomeKit 或 Matter</span></li>
+        <li class="node"><span class="node-icon"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="6" rx="1.5"/><rect x="3" y="13" width="18" height="6" rx="1.5"/><path d="M7 8h.01M7 16h.01"/></svg></span><strong>Homebridge</strong><small>執行這個外掛</small></li><li class="link" aria-hidden="true"><span>家裡的網路</span></li>
+        <li class="node"><span class="node-icon"><svg viewBox="61 65 390 390" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M122 186 256 80 390 186" stroke-width="30"/><rect x="126" y="216" width="260" height="76" rx="22" fill="currentColor" stroke="none"/><path d="M160 332q96 38 192 0" stroke-width="22"/><path d="M184 384q72 32 144 0" stroke-width="22" opacity=".7"/><path d="M210 432q46 24 92 0" stroke-width="22" opacity=".45"/></svg></span><strong>大金冷氣</strong><small>它的 Wi-Fi 模組</small></li>
+    </ol>
+  </section>
+
+  <section class="band" aria-labelledby="h-feat">
+    <div class="intro">
+      <h2 id="h-feat">在「家庭」App 裡能做什麼</h2>
+      <p>每台冷氣顯示為一個冷氣配件，只帶它真正有的控制項。</p>
+    </div>
+    <ul class="feats"><li><h3>開關、模式與溫度</h3><p>只顯示這台冷氣支援的模式。單冷機型若 Wi-Fi 模組仍回報暖氣，可以隱藏暖氣和自動。</p></li><li><h3>風速</h3><p>自動、靜音和五段風量，和遙控器一樣。</p></li><li><h3>擺風</h3><p>冷氣圖塊上有擺風開關。也可以另外加上下、左右擺風各自的開關。</p></li><li><h3>濕度與室外溫度</h3><p>有回報這些數值的機型，會多出對應的感應器。</p></li><li><h3>Siri、場景與自動化</h3><p>冷氣就像其他「家庭」配件，可以請 Siri 開冷氣，或在到家前先讓臥室涼下來。</p></li><li><h3>用你的語言命名</h3><p>外掛新增的開關和感應器可以用 28 種語言命名。你在「家庭」App 改過的名稱不會被動到。</p></li></ul>
+  </section>
+
+  <section class="band" aria-labelledby="h-matter">
+    <div class="split">
+      <div class="intro">
+        <h2 id="h-matter">改用 Matter，連用電量一起看 <span class="chip">Beta</span></h2>
+        <p>每台冷氣也可以改用 Matter 加入。「家庭」App（iOS 27 以上）只從 Matter 配件讀取用電資料，因此有電力量測的機型會出現在「能源」畫面，顯示即時功率和累計用電量。</p>
+        <p>累計用電量根據冷氣自己的每日與每月紀錄計算，並存在 Homebridge 裡，所以數字不會倒退。</p>
+      </div>
+      <div class="move">
+        <h3>三個步驟搬移現有設定</h3>
+        <p class="move-p">房間、場景和自動化無法從 HomeKit 帶過去，所以搬移期間新舊配件會同時存在，讓你從容地重新設定。</p>
+        <ol class="moves"><li><h3>開始搬移</h3><p>在外掛設定選擇「Start migration for all units」並重新啟動 Homebridge。每台冷氣會出現兩次，原本的 HomeKit 配件照常運作。</p></li><li><h3>配對 Matter 橋接器</h3><p>用設定頁顯示的代碼把它加入「家庭」App，替每台冷氣指定房間，再重建場景和自動化。</p></li><li><h3>完成搬移</h3><p>選擇「Finish migration」並重新啟動，HomeKit 那份配件就會移除。</p></li></ol>
+        <p class="back">改變主意了？任何時候都可以用「Back to HomeKit」一次把所有冷氣移回 HomeKit。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" aria-labelledby="h-dev">
+    <div class="intro">
+      <h2 id="h-dev">支援大金可在本機控制的 Wi-Fi 模組</h2>
+      <p>外掛會自動偵測每台冷氣使用的通訊協定。你只要輸入 IP 位址，或從網路掃描結果中挑選。</p>
+    </div>
+    <dl class="devs"><div><dt>較新的 Wi-Fi 模組</dt><dd>韌體 2.8.0 以上的外接模組和內建 Wi-Fi。</dd></div><div><dt>BRP069 世代模組</dt><dd>也就是 Home Assistant 大金整合所支援的介面，包含同時期的內建 Wi-Fi 機型。</dd></div><div><dt>AirBase（BRP15B61）</dt><dd>常見於澳洲的吊隱式系統。尚未支援分區控制。</dd></div><div><dt>加密的 BRP072C 模組</dt><dd>例如美國的 BRP072C42。輸入模組貼紙上的 13 位數金鑰即可。</dd></div></dl>
+    <div class="cloud">
+      <h3>不支援：只能走雲端的機型</h3>
+      <p>大金最新一代的模組完全無法在本機控制，包括歐洲的 BRP069C4x/C8x 和美國 ATMOSPHERA（FTXM-W）的內建 Wi-Fi。它們只能透過大金的雲端操作，任何本機外掛都無法控制。替代方案是 ESP32-Faikin 控制板或紅外線遙控器。 <a href="https://github.com/tasict/homebridge-daikin-local-platform/issues/17">看完整的調查過程</a></p>
+    </div>
+  </section>
+
+  <section class="band" id="start" aria-labelledby="h-start">
+    <h2 id="h-start">幾分鐘就能設定好</h2>
+    <ol class="steps"><li><h3>安裝外掛</h3><p>在 Homebridge UI 開啟外掛頁面，搜尋 Daikin Local Platform 並安裝。</p></li><li><h3>加入冷氣</h3><p>開啟外掛設定，網路掃描會列出找到的大金冷氣，點一下就能加入。</p></li><li><h3>連接 Apple「家庭」</h3><p>選擇 HomeKit 或 Matter，重新啟動 Homebridge，再用顯示的代碼把橋接器加入「家庭」App。</p></li></ol>
+    <p class="fine">需要 Homebridge 2.4 以上與 Node.js 22 以上。Homebridge 1.x 可以繼續使用外掛 1.5.1 版。 <a href="https://github.com/tasict/homebridge-daikin-local-platform#homebridge-setup">完整設定說明（英文）</a></p>
+  </section>
+
+  <section class="band" aria-labelledby="h-support">
+    <div class="tipjar">
+      <img src="../assets/boba.png" alt="" width="120" height="120">
+      <div>
+        <h2 id="h-support">讓它維持免費</h2>
+        <p>這個外掛沒有廣告，也沒有付費版。如果它讓你家更舒適，一杯珍奶或一點贊助，能幫我持續跟上大金的新韌體和 Homebridge 的新版本。</p>
+        <div class="actions">
+          <a class="btn" href="https://tasict.bobaboba.me"><img src="../assets/boba.png" alt="" width="22" height="22">請我喝珍奶</a>
+          <a class="tip" href="https://paypal.me/tasict">用 PayPal 贊助</a>
+        </div>
+        <p class="fine">珍奶贊助直接刷卡，不需要 PayPal 帳號。</p>
+      </div>
+    </div>
+  </section>
+</div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot">
+      <div>
+        <p>由 tasict 製作，以 Apache-2.0 授權釋出。</p>
+        <ul>
+          <li><a href="https://github.com/tasict/homebridge-daikin-local-platform">原始碼</a></li>
+          <li><a href="https://www.npmjs.com/package/homebridge-daikin-local-platform">npm 套件</a></li>
+          <li><a href="https://github.com/tasict/homebridge-daikin-local-platform/blob/master/CHANGELOG.md">更新紀錄</a></li>
+          <li><a href="https://github.com/tasict/homebridge-daikin-local-platform/issues">回報問題</a></li>
+        </ul>
+      </div>
+      <ul class="langs"><li><a href="../" hreflang="en" lang="en">English</a></li><li><a href="../zh-TW/" hreflang="zh-TW" lang="zh-Hant-TW" aria-current="page">繁體中文</a></li><li><a href="../ja/" hreflang="ja" lang="ja">日本語</a></li></ul>
+    </div>
+    <p class="tm">Daikin（大金）是 Daikin Industries, Ltd. 的商標；Apple Home（家庭）與 HomeKit 是 Apple Inc. 的商標；Matter 是 Connectivity Standards Alliance 的商標。本外掛為非官方專案，與上述公司無關，也未獲其背書。</p>
+  </div>
+</footer>
+<script src="../assets/site.js"></script>
+</body>
+</html>

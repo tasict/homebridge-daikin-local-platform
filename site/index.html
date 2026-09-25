@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daikin Local Platform: Daikin air conditioners in Apple Home, via Homebridge</title>
+<meta name="description" content="A free Homebridge plugin that brings Daikin air conditioners into Apple Home over HomeKit or Matter, controlled directly on your home network.">
+<link rel="canonical" href="https://tasict.github.io/homebridge-daikin-local-platform/">
+<link rel="alternate" hreflang="en" href="https://tasict.github.io/homebridge-daikin-local-platform/">
+<link rel="alternate" hreflang="zh-TW" href="https://tasict.github.io/homebridge-daikin-local-platform/zh-TW/">
+<link rel="alternate" hreflang="ja" href="https://tasict.github.io/homebridge-daikin-local-platform/ja/">
+<link rel="alternate" hreflang="x-default" href="https://tasict.github.io/homebridge-daikin-local-platform/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Daikin Local Platform: Daikin air conditioners in Apple Home, via Homebridge">
+<meta property="og:description" content="A free Homebridge plugin that brings Daikin air conditioners into Apple Home over HomeKit or Matter, controlled directly on your home network.">
+<meta property="og:url" content="https://tasict.github.io/homebridge-daikin-local-platform/">
+<meta property="og:image" content="https://tasict.github.io/homebridge-daikin-local-platform/assets/og.png">
+<meta property="og:locale" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#f2f7fa" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d1a24" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/icon.png">
+<link rel="stylesheet" href="assets/site.css">
+<script>
+try {
+  if (!localStorage.getItem('lang')) {
+    const pick = tag => {
+      const t = tag.toLowerCase();
+      if (t.startsWith('zh')) return 'zh-TW';
+      return ['ja', 'en'].find(l => t.startsWith(l));
+    };
+    const lang = (navigator.languages || [navigator.language]).map(pick).find(Boolean);
+    if (lang && lang !== 'en') location.replace(lang + '/' + location.search + location.hash);
+  }
+} catch { /* storage blocked: stay on English */ }
+</script>
+</head>
+<body>
+<header class="wrap masthead">
+  <a class="wordmark" href="./"><img src="assets/icon.svg" alt="" width="30" height="30">Daikin Local Platform</a>
+  <a href="https://github.com/tasict/homebridge-daikin-local-platform">Source code</a>
+  <a class="tip head-tip" href="https://tasict.bobaboba.me" aria-label="Buy me a boba"><img src="assets/boba.png" alt="" width="24" height="24"><span>Buy me a boba</span></a>
+  <details class="lang">
+    <summary aria-label="Language"><svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7.5"/><path d="M2.5 10h15M10 2.5c2.2 2.3 3.2 4.8 3.2 7.5s-1 5.2-3.2 7.5c-2.2-2.3-3.2-4.8-3.2-7.5s1-5.2 3.2-7.5z"/></svg><span>English</span></summary>
+    <ul><li><a href="./" hreflang="en" lang="en" aria-current="page">English</a></li><li><a href="zh-TW/" hreflang="zh-TW" lang="zh-Hant-TW">繁體中文</a></li><li><a href="ja/" hreflang="ja" lang="ja">日本語</a></li></ul>
+  </details>
+</header>
+
+<main>
+<div class="wrap">
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="hero-copy">
+      <h1 id="hero-title">Your Daikin,<br>in Apple Home.</h1>
+      <p class="lede">A Homebridge plugin that puts your Daikin air conditioners in the Home app, over HomeKit or Matter. It talks to each unit directly on your home network, with no cloud in between.</p>
+      <div class="actions">
+        <a class="btn" href="#start">Install in Homebridge</a>
+        <a href="https://github.com/tasict/homebridge-daikin-local-platform">View on GitHub</a>
+      </div>
+      <p class="fine">Free and open source. Needs Homebridge 2.4 or later.</p>
+    </div>
+    <div class="room" data-demo data-mode="cool" data-t='{&quot;st&quot;:{&quot;off&quot;:&quot;Off&quot;,&quot;cool&quot;:&quot;Cooling to {t}&quot;,&quot;heat&quot;:&quot;Heating to {t}&quot;,&quot;auto&quot;:&quot;Auto, {lo} to {hi}&quot;},&quot;now&quot;:&quot;Room {t}&quot;}'>
+      <svg class="unit" viewBox="0 0 480 250" role="img" aria-label="A wall-mounted air conditioner blowing air in the chosen mode.">
+      <rect class="unit-body" x="40" y="18" width="400" height="98" rx="28"/>
+      <rect class="unit-vent" x="84" y="88" width="312" height="11" rx="5.5"/>
+      <circle class="unit-led" cx="398" cy="46" r="5"/>
+      <g class="air">
+        <path d="M120 142q120 42 240 0"/>
+        <path d="M150 186q90 34 180 0"/>
+        <path d="M182 226q58 24 116 0"/>
+      </g>
+    </svg>
+      <div class="tile">
+        <div class="tile-head">
+          <span class="tile-icon"><svg viewBox="61 65 390 390" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M122 186 256 80 390 186" stroke-width="30"/><rect x="126" y="216" width="260" height="76" rx="22" fill="currentColor" stroke="none"/><path d="M160 332q96 38 192 0" stroke-width="22"/><path d="M184 384q72 32 144 0" stroke-width="22" opacity=".7"/><path d="M210 432q46 24 92 0" stroke-width="22" opacity=".45"/></svg></span>
+          <div class="tile-name"><strong>Living Room</strong><span data-status aria-live="polite"></span></div>
+          <span class="tile-now" data-now></span>
+        </div>
+        <div class="dial">
+          <button type="button" class="step" data-step="-0.5" aria-label="Lower the temperature">&minus;</button>
+          <output class="target" data-target>24°</output>
+          <button type="button" class="step" data-step="0.5" aria-label="Raise the temperature">+</button>
+        </div>
+        <fieldset class="seg">
+          <legend>Mode</legend>
+          <label><input type="radio" name="mode" value="off"><span>Off</span></label><label><input type="radio" name="mode" value="cool" checked><span>Cool</span></label><label><input type="radio" name="mode" value="heat"><span>Heat</span></label><label><input type="radio" name="mode" value="auto"><span>Auto</span></label>
+        </fieldset>
+      </div>
+      <p class="hint">Try it. Every unit gets these controls in the Home app.</p>
+    </div>
+  </section>
+
+  <section class="band" aria-labelledby="h-local">
+    <div class="intro">
+      <h2 id="h-local">Straight to the unit, on your network</h2>
+      <p>The plugin controls each unit through the local interface of its Wi-Fi adapter. No Daikin account is needed, and your air conditioners keep responding when the internet is down.</p>
+    </div>
+    <ol class="flow">
+        <li class="node"><span class="node-icon"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M9.5 12 12 9.8l2.5 2.2M10.3 11.3v3.2h3.4v-3.2"/></svg></span><strong>Home app</strong><small>iPhone, iPad, Mac or HomePod</small></li><li class="link" aria-hidden="true"><span>HomeKit or Matter</span></li>
+        <li class="node"><span class="node-icon"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="6" rx="1.5"/><rect x="3" y="13" width="18" height="6" rx="1.5"/><path d="M7 8h.01M7 16h.01"/></svg></span><strong>Homebridge</strong><small>Runs the plugin</small></li><li class="link" aria-hidden="true"><span>Your home network</span></li>
+        <li class="node"><span class="node-icon"><svg viewBox="61 65 390 390" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M122 186 256 80 390 186" stroke-width="30"/><rect x="126" y="216" width="260" height="76" rx="22" fill="currentColor" stroke="none"/><path d="M160 332q96 38 192 0" stroke-width="22"/><path d="M184 384q72 32 144 0" stroke-width="22" opacity=".7"/><path d="M210 432q46 24 92 0" stroke-width="22" opacity=".45"/></svg></span><strong>Daikin unit</strong><small>Its Wi-Fi adapter</small></li>
+    </ol>
+  </section>
+
+  <section class="band" aria-labelledby="h-feat">
+    <div class="intro">
+      <h2 id="h-feat">What you get in the Home app</h2>
+      <p>Each unit shows up as one air conditioner, with the controls it actually has.</p>
+    </div>
+    <ul class="feats"><li><h3>Power, mode and temperature</h3><p>Only the modes your unit supports. Cool-only models whose adapter still reports heating can hide Heat and Auto.</p></li><li><h3>Fan speed</h3><p>Automatic, quiet and five levels, the same steps as the remote.</p></li><li><h3>Swing</h3><p>A swing toggle on the tile. Optional switches control up-and-down and side-to-side swing separately.</p></li><li><h3>Humidity and outdoor temperature</h3><p>Extra sensors, on units that report those readings.</p></li><li><h3>Siri, scenes and automations</h3><p>Units work like any other Home accessory, so you can ask Siri or cool the bedroom before you get home.</p></li><li><h3>Names in your language</h3><p>Switches and sensors the plugin adds are named in any of 28 languages. Names you change in the Home app are kept.</p></li></ul>
+  </section>
+
+  <section class="band" aria-labelledby="h-matter">
+    <div class="split">
+      <div class="intro">
+        <h2 id="h-matter">Matter, with your electricity use <span class="chip">Beta</span></h2>
+        <p>Any unit can also be added over Matter. The Home app (iOS 27 or later) reads energy only from Matter accessories, so units whose adapter measures power show up in its Energy view, with live power and a running total.</p>
+        <p>The total is built from the unit&#x27;s own daily and monthly history and kept in Homebridge, so it never goes backwards.</p>
+      </div>
+      <div class="move">
+        <h3>Move an existing setup in three steps</h3>
+        <p class="move-p">Rooms, scenes and automations can&#x27;t be carried over from HomeKit, so the old and new accessories run side by side while you set things up.</p>
+        <ol class="moves"><li><h3>Start the migration</h3><p>Choose Start migration for all units in the plugin settings and restart Homebridge. Each unit now appears twice, and the HomeKit one keeps working.</p></li><li><h3>Pair the Matter bridge</h3><p>Add it in the Home app with the code shown in the settings, give each unit its room and rebuild your scenes and automations.</p></li><li><h3>Finish the migration</h3><p>Choose Finish migration and restart. The HomeKit copies are removed.</p></li></ol>
+        <p class="back">Changed your mind? Back to HomeKit moves every unit back in one step, at any point.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" aria-labelledby="h-dev">
+    <div class="intro">
+      <h2 id="h-dev">Works with Daikin&#x27;s local-control adapters</h2>
+      <p>The plugin detects which protocol each unit speaks. You only enter its IP address, or pick it from the network scan.</p>
+    </div>
+    <dl class="devs"><div><dt>Newer Wi-Fi adapters</dt><dd>Adapters and built-in Wi-Fi modules with firmware 2.8.0 or later.</dd></div><div><dt>BRP069-era adapters</dt><dd>The interface the Home Assistant Daikin integration also uses, including built-in Wi-Fi units of the same era.</dd></div><div><dt>AirBase (BRP15B61)</dt><dd>Common on Australian ducted systems. Zone control is not available yet.</dd></div><div><dt>Secure BRP072C adapters</dt><dd>Such as the US BRP072C42. Enter the 13-digit key printed on the adapter&#x27;s sticker.</dd></div></dl>
+    <div class="cloud">
+      <h3>Not supported: cloud-only units</h3>
+      <p>Daikin&#x27;s newest adapters can&#x27;t be controlled over the local network at all, including the European BRP069C4x/C8x and the built-in Wi-Fi of the US ATMOSPHERA (FTXM-W). They work only through Daikin&#x27;s cloud, so no local plugin can control them. An ESP32-Faikin board or an IR blaster are the alternatives. <a href="https://github.com/tasict/homebridge-daikin-local-platform/issues/17">Read the full investigation</a></p>
+    </div>
+  </section>
+
+  <section class="band" id="start" aria-labelledby="h-start">
+    <h2 id="h-start">Set it up in a few minutes</h2>
+    <ol class="steps"><li><h3>Install the plugin</h3><p>In the Homebridge UI, open Plugins, search for Daikin Local Platform and install it.</p></li><li><h3>Add your units</h3><p>Open the plugin settings. The network scan lists the Daikin units it finds, and one click adds each one.</p></li><li><h3>Connect to Apple Home</h3><p>Choose HomeKit or Matter, restart Homebridge and add the bridge in the Home app with the code it shows.</p></li></ol>
+    <p class="fine">Requires Homebridge 2.4 or later and Node.js 22 or later. Homebridge 1.x setups can stay on plugin version 1.5.1. <a href="https://github.com/tasict/homebridge-daikin-local-platform#homebridge-setup">Full configuration reference</a></p>
+  </section>
+
+  <section class="band" aria-labelledby="h-support">
+    <div class="tipjar">
+      <img src="assets/boba.png" alt="" width="120" height="120">
+      <div>
+        <h2 id="h-support">Keep it free</h2>
+        <p>The plugin has no ads and no paid version. If it keeps your home comfortable, a boba or a small tip helps me keep up with new Daikin firmware and Homebridge releases.</p>
+        <div class="actions">
+          <a class="btn" href="https://tasict.bobaboba.me"><img src="assets/boba.png" alt="" width="22" height="22">Buy me a boba</a>
+          <a class="tip" href="https://paypal.me/tasict">Tip with PayPal</a>
+        </div>
+        <p class="fine">Boba is paid by card. No PayPal account needed.</p>
+      </div>
+    </div>
+  </section>
+</div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot">
+      <div>
+        <p>Made by tasict. Released under the Apache-2.0 license.</p>
+        <ul>
+          <li><a href="https://github.com/tasict/homebridge-daikin-local-platform">Source code</a></li>
+          <li><a href="https://www.npmjs.com/package/homebridge-daikin-local-platform">npm package</a></li>
+          <li><a href="https://github.com/tasict/homebridge-daikin-local-platform/blob/master/CHANGELOG.md">Changelog</a></li>
+          <li><a href="https://github.com/tasict/homebridge-daikin-local-platform/issues">Report a problem</a></li>
+        </ul>
+      </div>
+      <ul class="langs"><li><a href="./" hreflang="en" lang="en" aria-current="page">English</a></li><li><a href="zh-TW/" hreflang="zh-TW" lang="zh-Hant-TW">繁體中文</a></li><li><a href="ja/" hreflang="ja" lang="ja">日本語</a></li></ul>
+    </div>
+    <p class="tm">Daikin is a trademark of Daikin Industries, Ltd. Apple Home and HomeKit are trademarks of Apple Inc. Matter is a trademark of the Connectivity Standards Alliance. This plugin is unofficial and not affiliated with or endorsed by any of them.</p>
+  </div>
+</footer>
+<script src="assets/site.js"></script>
+</body>
+</html>

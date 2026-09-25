@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daikin Local Platform：ダイキンのエアコンを Homebridge で Apple「ホーム」に</title>
+<meta name="description" content="ダイキンのエアコンを HomeKit または Matter で Apple「ホーム」App に追加する、無料の Homebridge プラグイン。家のネットワーク内で直接操作します。">
+<link rel="canonical" href="https://tasict.github.io/homebridge-daikin-local-platform/ja/">
+<link rel="alternate" hreflang="en" href="https://tasict.github.io/homebridge-daikin-local-platform/">
+<link rel="alternate" hreflang="zh-TW" href="https://tasict.github.io/homebridge-daikin-local-platform/zh-TW/">
+<link rel="alternate" hreflang="ja" href="https://tasict.github.io/homebridge-daikin-local-platform/ja/">
+<link rel="alternate" hreflang="x-default" href="https://tasict.github.io/homebridge-daikin-local-platform/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Daikin Local Platform：ダイキンのエアコンを Homebridge で Apple「ホーム」に">
+<meta property="og:description" content="ダイキンのエアコンを HomeKit または Matter で Apple「ホーム」App に追加する、無料の Homebridge プラグイン。家のネットワーク内で直接操作します。">
+<meta property="og:url" content="https://tasict.github.io/homebridge-daikin-local-platform/ja/">
+<meta property="og:image" content="https://tasict.github.io/homebridge-daikin-local-platform/assets/og.png">
+<meta property="og:locale" content="ja_JP">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#f2f7fa" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d1a24" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="../assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../assets/icon.png">
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body>
+<header class="wrap masthead">
+  <a class="wordmark" href="./"><img src="../assets/icon.svg" alt="" width="30" height="30">Daikin Local Platform</a>
+  <a href="https://github.com/tasict/homebridge-daikin-local-platform">ソースコード</a>
+  <a class="tip head-tip" href="https://tasict.bobaboba.me" aria-label="タピオカをおごる"><img src="../assets/boba.png" alt="" width="24" height="24"><span>タピオカをおごる</span></a>
+  <details class="lang">
+    <summary aria-label="言語"><svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7.5"/><path d="M2.5 10h15M10 2.5c2.2 2.3 3.2 4.8 3.2 7.5s-1 5.2-3.2 7.5c-2.2-2.3-3.2-4.8-3.2-7.5s1-5.2 3.2-7.5z"/></svg><span>日本語</span></summary>
+    <ul><li><a href="../" hreflang="en" lang="en">English</a></li><li><a href="../zh-TW/" hreflang="zh-TW" lang="zh-Hant-TW">繁體中文</a></li><li><a href="../ja/" hreflang="ja" lang="ja" aria-current="page">日本語</a></li></ul>
+  </details>
+</header>
+
+<main>
+<div class="wrap">
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="hero-copy">
+      <h1 id="hero-title">ダイキンのエアコンを<br>「ホーム」App で。</h1>
+      <p class="lede">ダイキンのエアコンを HomeKit または Matter で「ホーム」App に追加する Homebridge プラグインです。家のネットワーク内で各エアコンと直接やり取りし、クラウドを経由しません。</p>
+      <div class="actions">
+        <a class="btn" href="#start">Homebridge にインストール</a>
+        <a href="https://github.com/tasict/homebridge-daikin-local-platform">GitHub で見る</a>
+      </div>
+      <p class="fine">無料のオープンソース。Homebridge 2.4 以降が必要です。</p>
+    </div>
+    <div class="room" data-demo data-mode="cool" data-t='{&quot;st&quot;:{&quot;off&quot;:&quot;オフ&quot;,&quot;cool&quot;:&quot;冷房 {t} に設定&quot;,&quot;heat&quot;:&quot;暖房 {t} に設定&quot;,&quot;auto&quot;:&quot;自動 {lo}〜{hi}&quot;},&quot;now&quot;:&quot;室温 {t}&quot;}'>
+      <svg class="unit" viewBox="0 0 480 250" role="img" aria-label="選んだモードで風を送る壁掛けエアコン。">
+      <rect class="unit-body" x="40" y="18" width="400" height="98" rx="28"/>
+      <rect class="unit-vent" x="84" y="88" width="312" height="11" rx="5.5"/>
+      <circle class="unit-led" cx="398" cy="46" r="5"/>
+      <g class="air">
+        <path d="M120 142q120 42 240 0"/>
+        <path d="M150 186q90 34 180 0"/>
+        <path d="M182 226q58 24 116 0"/>
+      </g>
+    </svg>
+      <div class="tile">
+        <div class="tile-head">
+          <span class="tile-icon"><svg viewBox="61 65 390 390" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M122 186 256 80 390 186" stroke-width="30"/><rect x="126" y="216" width="260" height="76" rx="22" fill="currentColor" stroke="none"/><path d="M160 332q96 38 192 0" stroke-width="22"/><path d="M184 384q72 32 144 0" stroke-width="22" opacity=".7"/><path d="M210 432q46 24 92 0" stroke-width="22" opacity=".45"/></svg></span>
+          <div class="tile-name"><strong>リビング</strong><span data-status aria-live="polite"></span></div>
+          <span class="tile-now" data-now></span>
+        </div>
+        <div class="dial">
+          <button type="button" class="step" data-step="-0.5" aria-label="温度を下げる">&minus;</button>
+          <output class="target" data-target>24°</output>
+          <button type="button" class="step" data-step="0.5" aria-label="温度を上げる">+</button>
+        </div>
+        <fieldset class="seg">
+          <legend>モード</legend>
+          <label><input type="radio" name="mode" value="off"><span>オフ</span></label><label><input type="radio" name="mode" value="cool" checked><span>冷房</span></label><label><input type="radio" name="mode" value="heat"><span>暖房</span></label><label><input type="radio" name="mode" value="auto"><span>自動</span></label>
+        </fieldset>
+      </div>
+      <p class="hint">操作してみてください。どのエアコンにも「ホーム」App でこのコントロールが付きます。</p>
+    </div>
+  </section>
+
+  <section class="band" aria-labelledby="h-local">
+    <div class="intro">
+      <h2 id="h-local">家のネットワークで、エアコンと直接</h2>
+      <p>プラグインは各エアコンの無線 LAN アダプターのローカルインターフェースで操作します。ダイキンのアカウントは不要で、インターネットが止まってもエアコンを操作できます。</p>
+    </div>
+    <ol class="flow">
+        <li class="node"><span class="node-icon"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M9.5 12 12 9.8l2.5 2.2M10.3 11.3v3.2h3.4v-3.2"/></svg></span><strong>「ホーム」App</strong><small>iPhone、iPad、Mac、HomePod</small></li><li class="link" aria-hidden="true"><span>HomeKit または Matter</span></li>
+        <li class="node"><span class="node-icon"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="6" rx="1.5"/><rect x="3" y="13" width="18" height="6" rx="1.5"/><path d="M7 8h.01M7 16h.01"/></svg></span><strong>Homebridge</strong><small>プラグインを実行</small></li><li class="link" aria-hidden="true"><span>家のネットワーク</span></li>
+        <li class="node"><span class="node-icon"><svg viewBox="61 65 390 390" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M122 186 256 80 390 186" stroke-width="30"/><rect x="126" y="216" width="260" height="76" rx="22" fill="currentColor" stroke="none"/><path d="M160 332q96 38 192 0" stroke-width="22"/><path d="M184 384q72 32 144 0" stroke-width="22" opacity=".7"/><path d="M210 432q46 24 92 0" stroke-width="22" opacity=".45"/></svg></span><strong>ダイキンのエアコン</strong><small>無線 LAN アダプター</small></li>
+    </ol>
+  </section>
+
+  <section class="band" aria-labelledby="h-feat">
+    <div class="intro">
+      <h2 id="h-feat">「ホーム」App でできること</h2>
+      <p>各エアコンは 1 台のエアコンとして表示され、実際に使える操作だけが並びます。</p>
+    </div>
+    <ul class="feats"><li><h3>電源・モード・温度</h3><p>そのエアコンが対応するモードだけを表示します。冷房専用機でアダプターが暖房を報告する場合は、暖房と自動を隠せます。</p></li><li><h3>風量</h3><p>自動、静音、5 段階の風量。リモコンと同じ段階です。</p></li><li><h3>スイング</h3><p>タイルにスイングのオン／オフ。上下と左右を別々に操作するスイッチも追加できます。</p></li><li><h3>湿度と外気温</h3><p>これらの値を報告する機種には、センサーが追加されます。</p></li><li><h3>Siri、シーン、オートメーション</h3><p>ほかの「ホーム」アクセサリと同じように使えるので、Siri に頼んだり、帰宅前に寝室を冷やしたりできます。</p></li><li><h3>名前は好きな言語で</h3><p>プラグインが追加するスイッチやセンサーには、28 の言語で名前を付けられます。「ホーム」App で変えた名前はそのまま残ります。</p></li></ul>
+  </section>
+
+  <section class="band" aria-labelledby="h-matter">
+    <div class="split">
+      <div class="intro">
+        <h2 id="h-matter">Matter なら、消費電力も <span class="chip">ベータ</span></h2>
+        <p>どのエアコンも Matter で追加できます。「ホーム」App（iOS 27 以降）は電力データを Matter アクセサリからしか読み取らないため、電力を計測できる機種は「エネルギー」画面に現在の消費電力と積算電力量が表示されます。</p>
+        <p>積算値はエアコン自身の日別・月別の記録から算出して Homebridge に保存するので、数値が減ることはありません。</p>
+      </div>
+      <div class="move">
+        <h3>今の設定を 3 ステップで移行</h3>
+        <p class="move-p">部屋、シーン、オートメーションは HomeKit から引き継げないため、移行中は新旧のアクセサリが並んで動き、落ち着いて設定し直せます。</p>
+        <ol class="moves"><li><h3>移行を開始</h3><p>プラグイン設定で「Start migration for all units」を選び、Homebridge を再起動します。各エアコンが 2 つずつ表示され、HomeKit 側はそのまま使えます。</p></li><li><h3>Matter ブリッジを追加</h3><p>設定画面に表示されるコードで「ホーム」App に追加し、各エアコンに部屋を割り当て、シーンとオートメーションを作り直します。</p></li><li><h3>移行を完了</h3><p>「Finish migration」を選んで再起動すると、HomeKit 側のアクセサリが削除されます。</p></li></ol>
+        <p class="back">元に戻したくなったら、いつでも「Back to HomeKit」で全台まとめて HomeKit に戻せます。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" aria-labelledby="h-dev">
+    <div class="intro">
+      <h2 id="h-dev">ローカル操作できるダイキンのアダプターに対応</h2>
+      <p>各エアコンが使うプロトコルはプラグインが自動で判別します。入力するのは IP アドレスだけ。ネットワークスキャンの結果から選ぶこともできます。</p>
+    </div>
+    <dl class="devs"><div><dt>新しい無線 LAN アダプター</dt><dd>ファームウェア 2.8.0 以降の外付けアダプターと内蔵無線 LAN。</dd></div><div><dt>BRP069 世代のアダプター</dt><dd>Home Assistant のダイキン連携も使うインターフェースです。同世代の内蔵無線 LAN 機種も含みます。</dd></div><div><dt>AirBase（BRP15B61）</dt><dd>オーストラリアのダクト式システムで一般的です。ゾーン制御にはまだ対応していません。</dd></div><div><dt>セキュアな BRP072C アダプター</dt><dd>米国の BRP072C42 など。アダプターのシールに印刷された 13 桁のキーを入力します。</dd></div></dl>
+    <div class="cloud">
+      <h3>非対応：クラウド専用の機種</h3>
+      <p>ダイキンの最新世代のアダプターは、ローカルネットワークからは一切操作できません。欧州の BRP069C4x/C8x や、米国 ATMOSPHERA（FTXM-W）の内蔵無線 LAN などです。ダイキンのクラウド経由でしか動かないため、ローカルのプラグインでは操作できません。代わりに ESP32-Faikin ボードや赤外線リモコンを使う方法があります。 <a href="https://github.com/tasict/homebridge-daikin-local-platform/issues/17">調査の詳細を読む</a></p>
+    </div>
+  </section>
+
+  <section class="band" id="start" aria-labelledby="h-start">
+    <h2 id="h-start">数分でセットアップ</h2>
+    <ol class="steps"><li><h3>プラグインをインストール</h3><p>Homebridge UI のプラグイン画面で Daikin Local Platform を検索してインストールします。</p></li><li><h3>エアコンを追加</h3><p>プラグイン設定を開くと、ネットワークスキャンで見つかったダイキンのエアコンが並びます。クリックひとつで追加できます。</p></li><li><h3>Apple「ホーム」につなぐ</h3><p>HomeKit か Matter を選んで Homebridge を再起動し、表示されたコードでブリッジを「ホーム」App に追加します。</p></li></ol>
+    <p class="fine">Homebridge 2.4 以降と Node.js 22 以降が必要です。Homebridge 1.x ではプラグイン 1.5.1 をそのまま使えます。 <a href="https://github.com/tasict/homebridge-daikin-local-platform#homebridge-setup">設定項目の詳しい説明（英語）</a></p>
+  </section>
+
+  <section class="band" aria-labelledby="h-support">
+    <div class="tipjar">
+      <img src="../assets/boba.png" alt="" width="120" height="120">
+      <div>
+        <h2 id="h-support">無料のままで続けるために</h2>
+        <p>このプラグインには広告も有料版もありません。快適に使えていたら、タピオカ 1 杯や少しのご支援が、ダイキンの新しいファームウェアや Homebridge の新バージョンへの対応を続ける力になります。</p>
+        <div class="actions">
+          <a class="btn" href="https://tasict.bobaboba.me"><img src="../assets/boba.png" alt="" width="22" height="22">タピオカをおごる</a>
+          <a class="tip" href="https://paypal.me/tasict">PayPal で支援</a>
+        </div>
+        <p class="fine">タピオカはクレジットカードで支払えます。PayPal アカウントは不要です。</p>
+      </div>
+    </div>
+  </section>
+</div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot">
+      <div>
+        <p>tasict 作。Apache-2.0 ライセンスで公開しています。</p>
+        <ul>
+          <li><a href="https://github.com/tasict/homebridge-daikin-local-platform">ソースコード</a></li>
+          <li><a href="https://www.npmjs.com/package/homebridge-daikin-local-platform">npm パッケージ</a></li>
+          <li><a href="https://github.com/tasict/homebridge-daikin-local-platform/blob/master/CHANGELOG.md">変更履歴</a></li>
+          <li><a href="https://github.com/tasict/homebridge-daikin-local-platform/issues">問題を報告</a></li>
+        </ul>
+      </div>
+      <ul class="langs"><li><a href="../" hreflang="en" lang="en">English</a></li><li><a href="../zh-TW/" hreflang="zh-TW" lang="zh-Hant-TW">繁體中文</a></li><li><a href="../ja/" hreflang="ja" lang="ja" aria-current="page">日本語</a></li></ul>
+    </div>
+    <p class="tm">Daikin（ダイキン）は Daikin Industries, Ltd. の商標です。Apple Home（ホーム）と HomeKit は Apple Inc. の商標、Matter は Connectivity Standards Alliance の商標です。本プラグインは非公式で、これらの企業とは関係がなく、承認も受けていません。</p>
+  </div>
+</footer>
+<script src="../assets/site.js"></script>
+</body>
+</html>

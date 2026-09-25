@@ -4,11 +4,15 @@
 
 # Homebridge Daikin Local Platform
 
+**Website: [tasict.github.io/homebridge-daikin-local-platform](https://tasict.github.io/homebridge-daikin-local-platform/)** (English, 繁體中文, 日本語)
+
 [![GitHub version](https://img.shields.io/github/package-json/v/tasict/homebridge-daikin-local-platform?label=GitHub)](https://github.com/tasict/homebridge-daikin-local-platform)
 [![npm version](https://img.shields.io/npm/v/homebridge-daikin-local-platform?color=%23cb3837&label=npm)](https://www.npmjs.com/package/homebridge-daikin-local-platform)
 [![Matter](https://img.shields.io/badge/Matter-supported%20since%202.0.0-2ea44f)](#matter-and-energy-beta--new-in-200)
 
 `homebridge-daikin-local-platform` is a dynamic platform plugin for [Homebridge](https://homebridge.io) that provides HomeKit and Matter support for Daikin climate devices to be controlled.
+
+Free and open source. If it keeps your home comfortable, you can [buy me a boba](https://tasict.bobaboba.me) (by card, no PayPal account needed) or [tip with PayPal](https://paypal.me/tasict).
 
 > [!IMPORTANT]
 > **New in 2.0.0: Matter support.** Units can now be published over Matter as well as HomeKit — with the same controls — and units that meter their consumption show up in the Apple Home app's Energy view (iOS 27+). See [Matter and energy (Beta)](#matter-and-energy-beta--new-in-200).
@@ -133,6 +137,13 @@ If `true`, the plugin will print debugging information to the Homebridge log.
 - If you have any issues with this plugin, enable the debug mode in the settings (and restart the plugin). This will print additional information to the log. If this doesn't help you resolve the issue, feel free to create a [GitHub issue](https://github.com/tasict/homebridge-daikin-local-platform/issues) and attach the available debugging information.
 
 - If the plugin affects the general responsiveness and reliability of your Homebridge setup, you can run it as an isolated [child bridge](https://github.com/homebridge/homebridge/wiki/Child-Bridges).
+
+## Support
+
+If this plugin is useful to you, I'd love it if you bought me a boba:
+
+- **[Buy me a boba](https://tasict.bobaboba.me)**: pay by card, no PayPal account needed
+- **[Tip with PayPal](https://paypal.me/tasict)**
 
 ## Contributing
 

@@ -11,11 +11,17 @@
   "bugs": {
     "url": "https://github.com/tasict/homebridge-daikin-local-platform/issues"
   },
-  "homepage": "https://github.com/tasict/homebridge-daikin-local-platform#readme",
-  "funding": {
-    "type": "github",
-    "url": "https://PayPal.Me/tasict"
-  },
+  "homepage": "https://tasict.github.io/homebridge-daikin-local-platform/",
+  "funding": [
+    {
+      "type": "individual",
+      "url": "https://tasict.bobaboba.me"
+    },
+    {
+      "type": "paypal",
+      "url": "https://paypal.me/tasict"
+    }
+  ],
   "engines": {
     "homebridge": "^2.4.0",
     "node": "^22 || ^24 || ^26"

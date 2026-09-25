@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Homebridge Daikin Local Platform">
+  <rect x="0" y="0" width="512" height="512" rx="114" fill="#0097E0"/>
+  <path d="M 122 186 L 256 80 L 390 186" fill="none" stroke="#FFFFFF" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="126" y="216" width="260" height="76" rx="22" fill="#FFFFFF"/>
+  <rect x="158" y="266" width="196" height="13" rx="6" fill="#003F63" opacity="0.32"/>
+  <path d="M 160 332 Q 256 370 352 332" fill="none" stroke="#FFFFFF" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" opacity="0.95"/>
+  <path d="M 184 384 Q 256 416 328 384" fill="none" stroke="#FFFFFF" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>
+  <path d="M 210 432 Q 256 456 302 432" fill="none" stroke="#FFFFFF" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" opacity="0.45"/>
+</svg>

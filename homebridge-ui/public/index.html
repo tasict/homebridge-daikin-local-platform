@@ -69,6 +69,17 @@
   body.dark-mode .dlp-proto label.dlp-picked { border-color: #6ea8fe; box-shadow: 0 0 0 1px #6ea8fe; }
   .dlp-proto input { margin-top: 3px; }
   .dlp-code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 16px; font-weight: 600; letter-spacing: 0.05em; }
+  .dlp-support { margin: 20px 0 8px; padding-top: 14px; border-top: 1px solid #dee2e6; font-size: 12.5px; }
+  body.dark-mode .dlp-support { border-top-color: #3e4144; }
+  .dlp-support-text { opacity: 0.7; margin: 0 0 8px; line-height: 1.5; }
+  .dlp-support-links { display: flex; flex-wrap: wrap; gap: 8px; }
+  .dlp-tip { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 3px 12px; border: 1px solid #dee2e6; border-radius: 8px; color: inherit; font-size: 12.5px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+  .dlp-tip:hover, .dlp-tip:focus { color: inherit; text-decoration: none; border-color: #adb5bd; }
+  .dlp-tip:focus-visible { outline: 2px solid #0d6efd; outline-offset: 2px; }
+  body.dark-mode .dlp-tip { border-color: #3e4144; }
+  body.dark-mode .dlp-tip:hover, body.dark-mode .dlp-tip:focus { border-color: #6c757d; }
+  .dlp-tip img { width: 20px; height: 20px; margin-left: -5px; border-radius: 5px; }
+  .dlp-support-note { opacity: 0.6; font-size: 11.5px; margin: 8px 0 0; }
 </style>
 
 <!-- 1. Devices: one unified list. Configured units (climateIPs) are enriched
@@ -156,6 +167,20 @@
       </div>
     </div>
   </div>
+</div>
+
+<!-- Support: a quiet footer below the settings, never in the way of a task.
+     The cup icon is inlined because the iframe loads nothing external. -->
+<div class="dlp-support">
+  <p class="dlp-support-text">
+    This plugin is free and open source. If it keeps your home comfortable,
+    you can buy me a boba or send a tip with PayPal.
+  </p>
+  <div class="dlp-support-links">
+    <a class="dlp-tip" href="https://tasict.bobaboba.me" target="_blank" rel="noopener noreferrer"><img src="data:image/png;base64,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" alt="" width="20" height="20">Buy me a boba</a>
+    <a class="dlp-tip" href="https://paypal.me/tasict" target="_blank" rel="noopener noreferrer">Tip with PayPal</a>
+  </div>
+  <p class="dlp-support-note">Boba is paid by card. No PayPal account needed.</p>
 </div>
 
 <script>
