@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.1.0 (2026-10-19)
+
+- Added a per-device *Show setpoint as temperature* option ([#20](https://github.com/tasict/homebridge-daikin-local-platform/issues/20)): the unit's tile in the Home app shows the target temperature instead of the unit's own room temperature reading, for units whose built-in sensor reads far off the room. Heating/cooling status still follows the unit's sensor. Configured from the device's edit form in the settings UI — such units show a *setpoint* chip in the device list — or via the new `climateSetpointAsTemperature` config array (same rules as `climateCoolingOnly`). Works over HomeKit and Matter.
+
 ## 2.0.5 (2026-10-15)
 
 - Fixed: with a secure BRP072C adapter, Homebridge could fail to save its accessory cache (*Failed to save cached accessories to disk: Converting circular structure to JSON*), so accessories did not persist between restarts — on the main bridge, those of every plugin ([#19](https://github.com/tasict/homebridge-daikin-local-platform/issues/19)).
