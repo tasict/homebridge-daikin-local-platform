@@ -23,6 +23,9 @@ export interface DaikinPlatformConfig extends PlatformConfig {
   // climateIPs entries of Matter units that also get a separate swing
   // switch accessory (Matter has no swing control Apple Home shows).
   climateMatterSwing?: Array<string>;
+  // climateIPs entries of units whose tile shows the setpoint in place of
+  // the indoor reading (built-in sensor far off the room, issue #20).
+  climateSetpointAsTemperature?: Array<string>;
   // Language for the default HomeKit names of plugin-created services (see
   // src/i18n.ts). Same codes as the Homebridge UI languages; the settings
   // UI defaults it to the language selected there. Absent = English.

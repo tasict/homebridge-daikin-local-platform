@@ -9,7 +9,7 @@ import {
   PlatformConfig,
   Service,
 } from 'homebridge';
-import {DaikinLocalAPI, DaikinDevice} from './daikin-local';
+import {DaikinLocalAPI, DaikinDevice, CLIMATE_MODE_COOLING} from './daikin-local';
 import ClimateAccessory from './accessories/climate';
 import ClimateMatterAccessory, { thermostatFeatureSignature } from './accessories/climate-matter';
 import DaikinPlatformLogger from './logger';
@@ -127,6 +127,17 @@ export default class DaikinPlatform implements DynamicPlatformPlugin {
   // True when the unit gets a separate Matter swing switch (climateMatterSwing).
   isMatterSwingEnabled(ip: string | undefined): boolean {
     return this.configListHas(this.platformConfig.climateMatterSwing, ip);
+  }
+
+  // The temperature a unit's tile shows: the indoor reading, or with
+  // climateSetpointAsTemperature the setpoint — the current mode's target,
+  // else (fan and dry have none) the cooling one. Heating/cooling status
+  // still follows the indoor reading, which is what the unit acts on.
+  roomTemperature(device: DaikinDevice): number {
+    if (!this.configListHas(this.platformConfig.climateSetpointAsTemperature, device.IP)) {
+      return device.getIndoorTemperature();
+    }
+    return device.getTargetTemperature() || device.getTargetTemperatureWithMode(CLIMATE_MODE_COOLING);
   }
 
   async checkDevices() {

@@ -67,6 +67,13 @@
           "type": "string"
         }
       },
+      "climateSetpointAsTemperature": {
+        "type": "array",
+        "description": "Units whose Home app tile shows the target temperature instead of the unit's own room temperature reading, by IP exactly as written in climateIPs. For units whose built-in sensor reads far off the real room temperature. Edited from the device list in the settings UI.",
+        "items": {
+          "type": "string"
+        }
+      },
       "language": {
         "title": "HomeKit Name Language",
         "description": "Language for the default HomeKit names of the switches and sensors this plugin creates (e.g. Outdoor Temperature, Vertical Swing, Horizontal Swing). Same options as the Homebridge UI language; the settings UI defaults it to the language selected there. Names changed in the Home app are never touched.",

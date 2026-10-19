@@ -347,6 +347,7 @@ export default class ClimateMatterAccessory {
     const power = device.getPowerStatus();
     const mode = device.getOperationMode();
     const indoor = device.getIndoorTemperature();
+    const shown = this.platform.roomTemperature(device);
     const outdoor = device.supportsOutdoorTemperature() ? device.getOutdoorTemperature() : NaN;
 
     // Each mode keeps its own target on the unit; Auto's single target is
@@ -376,7 +377,7 @@ export default class ClimateMatterAccessory {
       && (mode === CLIMATE_MODE_AUTO || mode === CLIMATE_MODE_COOLING);
 
     return {
-      localTemperature: Number.isFinite(indoor) ? toMatterTemp(indoor) : null,
+      localTemperature: Number.isFinite(shown) ? toMatterTemp(shown) : null,
       ...(Number.isFinite(outdoor) ? { outdoorTemperature: toMatterTemp(outdoor) } : {}),
       systemMode: power ? this.reportedSystemMode(mode) : SYSTEM_MODE_OFF,
       thermostatRunningState: { heat: heating, cool: cooling, fan: power },

@@ -88,7 +88,8 @@
      Per-device settings live inside the device's own inline edit form as
      option rows: the 13-digit BRP072C key (climateKeys), the cooling-only
      flag (climateCoolingOnly), the swing-switches flag
-     (climateSwingSwitches) and the Matter choice (climateMatter /
+     (climateSwingSwitches), the setpoint-as-temperature flag
+     (climateSetpointAsTemperature) and the Matter choice (climateMatter /
      climateMatterMigration) — there are no
      separate sections for them.
      The scan runs automatically when the page opens. -->
@@ -200,6 +201,7 @@
     lock: '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true" focusable="false"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg>',
     snow: '<svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M8 1.5v13M2.4 4.75l11.2 6.5M13.6 4.75 2.4 11.25"/></svg>',
     matter: '<svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="8" cy="3" r="1.6"/><circle cx="3" cy="12.5" r="1.6"/><circle cx="13" cy="12.5" r="1.6"/><path d="M8 4.6v4.2M4.4 11.6 8 8.8l3.6 2.8"/></svg>',
+    thermo: '<svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M6.5 9.4V3a1.5 1.5 0 0 1 3 0v6.4a3 3 0 1 1-3 0z"/></svg>',
     swing: '<svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M8 2v12M6 4l2-2 2 2M6 12l2 2 2-2M2 8h12M4 6 2 8l2 2M12 6l2 2-2 2"/></svg>',
   };
 
@@ -219,10 +221,11 @@
   // `orig` snapshots the row when an edit opens so Cancel/Esc can revert);
   // climateKeys entries that match no device survive in orphanKeys until the
   // user adopts them back or deletes them — never dropped silently.
-  let deviceRows = [];              // [{ value: "<ip[:port]>", key?, coolOnly?, swingSwitches?, matter?, matterMigration?, editing?, ... }]
+  let deviceRows = [];              // [{ value: "<ip[:port]>", key?, coolOnly?, swingSwitches?, setpoint?, matter?, matterMigration?, editing?, ... }]
   let orphanKeys = [];              // [{ ip, key }]
   let orphanCoolingOnly = [];       // climateCoolingOnly entries matching no device
   let orphanSwingSwitches = [];     // climateSwingSwitches entries matching no device
+  let orphanSetpoint = [];          // climateSetpointAsTemperature entries matching no device
   let orphanMatter = [];            // climateMatter entries matching no device
   let orphanMatterMigration = [];   // climateMatterMigration entries matching no device
   let orphanMatterSwing = [];       // climateMatterSwing entries matching no device
@@ -386,6 +389,17 @@
       delete config.climateSwingSwitches;
     }
 
+    const setpointEntries = deviceRows
+      .filter((row) => row.value.trim() !== '' && row.setpoint === true)
+      .map((row) => row.value.trim())
+      .concat(orphanSetpoint);
+
+    if (setpointEntries.length > 0) {
+      config.climateSetpointAsTemperature = setpointEntries;
+    } else {
+      delete config.climateSetpointAsTemperature;
+    }
+
     // Matter flags, same shape and rules as climateCoolingOnly.
     const matterEntries = deviceRows
       .filter((row) => row.value.trim() !== '' && row.matter === true)
@@ -492,6 +506,7 @@
   function adoptOrphanFlags(row) {
     adoptOrphanFlag(orphanCoolingOnly, row, 'coolOnly');
     adoptOrphanFlag(orphanSwingSwitches, row, 'swingSwitches');
+    adoptOrphanFlag(orphanSetpoint, row, 'setpoint');
     adoptOrphanFlag(orphanMatter, row, 'matter');
     adoptOrphanFlag(orphanMatterMigration, row, 'matterMigration');
     adoptOrphanFlag(orphanMatterSwing, row, 'matterSwing');
@@ -514,6 +529,7 @@
     [
       [row.coolOnly, orphanCoolingOnly],
       [row.swingSwitches, orphanSwingSwitches],
+      [row.setpoint, orphanSetpoint],
       [row.matter, orphanMatter],
       [row.matterMigration, orphanMatterMigration],
       [row.matterSwing, orphanMatterSwing],
@@ -530,6 +546,7 @@
     key: row.key,
     coolOnly: row.coolOnly === true,
     swingSwitches: row.swingSwitches === true,
+    setpoint: row.setpoint === true,
     matter: row.matter === true,
     matterMigration: row.matterMigration === true,
     matterSwing: row.matterSwing === true,
@@ -588,6 +605,13 @@
       chip.className = 'dlp-chip';
       chip.innerHTML = ICONS.swing;
       chip.appendChild(document.createTextNode('swing'));
+      title.appendChild(chip);
+    }
+    if (opts.setpoint) {
+      const chip = document.createElement('span');
+      chip.className = 'dlp-chip';
+      chip.innerHTML = ICONS.thermo;
+      chip.appendChild(document.createTextNode('setpoint'));
       title.appendChild(chip);
     }
     if (opts.matter && opts.matter !== 'hap') {
@@ -723,6 +747,11 @@
         row.swingSwitches = true;
       } else {
         delete row.swingSwitches;
+      }
+      if (orig.setpoint) {
+        row.setpoint = true;
+      } else {
+        delete row.setpoint;
       }
       setMatterChoice(row, orig.matter ? 'matter' : orig.matterMigration ? 'migrate' : 'hap');
       if (orig.matterSwing) {
@@ -938,6 +967,23 @@
     swing.opt.appendChild(swingSwitch.label);
     options.appendChild(swing.opt);
 
+    // Setpoint as temperature (issue #20)
+    const setpoint = optionRow('Show setpoint as temperature',
+      'Show the target temperature on the tile instead of the unit\'s own room '
+      + 'temperature reading — for units whose built-in sensor reads far off the '
+      + 'room. Heating/cooling status still follows the unit\'s sensor.');
+    const setpointSwitch = switchControl(row.setpoint === true, 'Show setpoint as temperature');
+    setpointSwitch.input.addEventListener('change', () => {
+      if (setpointSwitch.input.checked) {
+        row.setpoint = true;
+      } else {
+        delete row.setpoint;
+      }
+      sync();
+    });
+    setpoint.opt.appendChild(setpointSwitch.label);
+    options.appendChild(setpoint.opt);
+
     // Matter
     {
       const matter = optionRow('Matter (Beta)',
@@ -1069,6 +1115,7 @@
         secure: rowKey(row) !== '',
         coolOnly: row.coolOnly === true,
         swingSwitches: row.swingSwitches === true,
+        setpoint: row.setpoint === true,
         matter: matterChoice(row),
       }));
 
@@ -1456,7 +1503,7 @@
     }
   }
 
-  // Attach climateCoolingOnly / climateSwingSwitches / climateMatter / climateMatterMigration entries to their device
+  // Attach climateCoolingOnly / climateSwingSwitches / climateSetpointAsTemperature / climateMatter / climateMatterMigration entries to their device
   // rows — exact entry first, then bare IP, same repair rules as climateKeys.
   // Leftovers ride along in the orphan lists (and are written back verbatim)
   // so a device removed and re-added later gets its flags back.
@@ -1476,6 +1523,7 @@
   };
   loadFlagList(config.climateCoolingOnly, 'coolOnly', orphanCoolingOnly);
   loadFlagList(config.climateSwingSwitches, 'swingSwitches', orphanSwingSwitches);
+  loadFlagList(config.climateSetpointAsTemperature, 'setpoint', orphanSetpoint);
   loadFlagList(config.climateMatter, 'matter', orphanMatter);
   loadFlagList(config.climateMatterMigration, 'matterMigration', orphanMatterMigration);
   loadFlagList(config.climateMatterSwing, 'matterSwing', orphanMatterSwing);

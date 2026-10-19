@@ -677,7 +677,7 @@ export default class ClimateAccessory {
       : this.platform.Characteristic.Active.INACTIVE;
     
       this.services['Climate'].updateCharacteristic(this.platform.Characteristic.Active, active);
-      this.services['Climate'].updateCharacteristic(this.platform.Characteristic.CurrentTemperature, this.accessory.context.device.getIndoorTemperature());
+      this.services['Climate'].updateCharacteristic(this.platform.Characteristic.CurrentTemperature, this.platform.roomTemperature(this.accessory.context.device));
   
       this.getCurrentHeaterCoolerState();
 
