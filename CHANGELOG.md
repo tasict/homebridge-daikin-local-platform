@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.1.2 (2026-10-23)
+
+- Security: the plugin now requires axios 1.20.0 or later. The range it allowed before still admitted axios releases with known vulnerabilities (SSRF, prototype pollution, denial of service); a fresh install already received a fixed version, so this only matters for setups that resolved an older axios.
+- Updated the remaining dependencies to their latest versions and dropped the `tslog` dependency.
+
 ## 2.1.1 (2026-10-23)
 
 - Fixed: with units on the older BRP069-style adapters, a Siri command such as *set the living room to 21°* often took about 8 seconds, and the Home app reported the unit as not responding although the command reached it ([#21](https://github.com/tasict/homebridge-daikin-local-platform/issues/21)). The settings HomeKit sends together (power, mode, temperature) now go to the unit as one command, and the plugin talks to these adapters faster — the same command now takes about a second. This also stops such a command from briefly starting the unit in its previous mode.
