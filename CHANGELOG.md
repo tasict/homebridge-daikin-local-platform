@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.1.1 (2026-10-23)
+
+- Fixed: with units on the older BRP069-style adapters, a Siri command such as *set the living room to 21°* often took about 8 seconds, and the Home app reported the unit as not responding although the command reached it ([#21](https://github.com/tasict/homebridge-daikin-local-platform/issues/21)). The settings HomeKit sends together (power, mode, temperature) now go to the unit as one command, and the plugin talks to these adapters faster — the same command now takes about a second. This also stops such a command from briefly starting the unit in its previous mode.
+- Requests to one unit no longer wait for the other units on any adapter type, so controlling one unit stays responsive while the others are being polled.
+
 ## 2.1.0 (2026-10-19)
 
 - Added a per-device *Show setpoint as temperature* option ([#20](https://github.com/tasict/homebridge-daikin-local-platform/issues/20)): the unit's tile in the Home app shows the target temperature instead of the unit's own room temperature reading, for units whose built-in sensor reads far off the room. Heating/cooling status still follows the unit's sensor. Configured from the device's edit form in the settings UI — such units show a *setpoint* chip in the device list — or via the new `climateSetpointAsTemperature` config array (same rules as `climateCoolingOnly`). Works over HomeKit and Matter.
