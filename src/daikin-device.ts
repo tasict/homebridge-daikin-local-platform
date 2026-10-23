@@ -1,5 +1,5 @@
 import DaikinPlatformLogger from './logger';
-import axios, { AxiosRequestConfig } from 'axios';
+import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import rateLimit from 'axios-rate-limit';
 
 import {
@@ -52,10 +52,6 @@ export interface EnergyHistory {
   utcOffsetMinutes?: number;  // the unit's time zone, which sets its day boundary
 }
 
-// One request at a time across every device so a burst of HomeKit reads
-// cannot flood the units.
-const http = rateLimit(axios.create(), { maxRequests: 1, perMilliseconds: 500 });
-
 // Protocol-independent Daikin device. Subclasses implement one wire protocol
 // each (see DaikinDsiotDevice and DaikinBRP069Device); every getter/setter
 // exchanges values in the shared CLIMATE_MODE_* / CLIMATE_FAN_SPEED_* codes so
@@ -70,6 +66,9 @@ export abstract class DaikinDevice {
   protected _callbacks: ((device: DaikinDevice) => void)[] = [];
   // Shared promise for an in-flight query so concurrent reads don't each hit the unit.
   protected _inflightQuery: Promise<any> | null = null;
+  // Each unit has its own request queue: with a shared one, a command waited
+  // behind every other unit's polling (issue #21).
+  private readonly _http: AxiosInstance;
 
   constructor(
     public readonly IP: string,
@@ -78,6 +77,13 @@ export abstract class DaikinDevice {
     this._IP = IP;
     this._Response = {};
     this._log = log;
+    this._http = rateLimit(axios.create(), { maxRequests: 1, perMilliseconds: this.requestIntervalMs() });
+  }
+
+  // Minimum time between two requests to the unit. dsiot controllers answer a
+  // burst (e.g. dragging the fan speed) with HTTP 429.
+  protected requestIntervalMs(): number {
+    return 500;
   }
 
   // Homebridge saves accessory.context, which holds this device, as JSON.
@@ -93,7 +99,7 @@ export abstract class DaikinDevice {
   }
 
   protected async request(config: AxiosRequestConfig): Promise<any> {
-    return http.request(config);
+    return this._http.request(config);
   }
 
   public async queryDevice(bForce:boolean = false): Promise<any> {

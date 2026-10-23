@@ -91,6 +91,16 @@ export class DaikinBRP069Device extends DaikinDevice {
   protected readonly deviceModeByClimateMode: Record<string, string> = BRP069_MODE_BY_CLIMATE_MODE;
   protected readonly targetTempKeyByMode: Record<string, string> = TARGET_TEMP_KEY_BY_MODE;
 
+  // Command waiting for the previous one to finish; settings sent meanwhile join it.
+  private _pendingControl: { overrides: Record<string, string>; result: Promise<boolean> } | undefined;
+  private _controlQueue: Promise<unknown> = Promise.resolve();
+
+  // A command is four requests (read, set, then the status read-back) and
+  // these adapters answer in ~100 ms; at 500 ms HomeKit gave up (issue #21).
+  protected requestIntervalMs(): number {
+    return 150;
+  }
+
   public getProtocolName(): string {
     return 'BRP069 (legacy)';
   }
@@ -518,10 +528,37 @@ export class DaikinBRP069Device extends DaikinDevice {
     return await this.sendControl({ 'f_rate': rate });
   }
 
+  // Commands run one at a time, so none reads the control info another is
+  // about to change, and the settings that arrive while one runs are merged
+  // into the next: HomeKit writes power, mode and setpoint together, each to
+  // its own handler (issue #21). Like pydaikin's set(), which takes them all.
+  protected sendControl(overrides: Record<string, string>): Promise<boolean> {
+
+    if (this._pendingControl) {
+      Object.assign(this._pendingControl.overrides, overrides);
+      return this._pendingControl.result;
+    }
+
+    const merged = { ...overrides };
+
+    const result = this._controlQueue
+      // Let the other handlers of the same HomeKit write join first.
+      .then(() => new Promise(resolve => setImmediate(resolve)))
+      .then(() => {
+        this._pendingControl = undefined;
+        return this.applyControl(merged);
+      });
+
+    this._pendingControl = { overrides: merged, result };
+    this._controlQueue = result;
+
+    return result;
+  }
+
   // set_control_info must always carry the full pow/mode/stemp/shum(/f_rate/f_dir)
   // state, so read the current control info, merge the overrides and send it all
   // back — the same flow as pydaikin's _update_settings()/set().
-  protected async sendControl(overrides: Record<string, string>): Promise<boolean> {
+  private async applyControl(overrides: Record<string, string>): Promise<boolean> {
 
     try {
 
