@@ -1,20 +1,17 @@
 import { Logger } from 'homebridge';
-import { Logger as TsLogger, ILogObj } from "tslog";
 
 
 /**
  * Decorates the Homebridge logger to only log debug messages when debug mode is enabled.
+ * Without a Homebridge logger (the standalone harnesses) it falls back to the console.
  */
 export default class DaikinPlatformLogger {
-
-  private tsLogger: TsLogger<ILogObj> = new TsLogger();
 
   constructor(
     private readonly logger: Logger|undefined = undefined,
     private readonly debugMode: boolean = false,
   ) {}
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   debug(...messages: any[]) {
 
     if (this.debugMode) {
@@ -23,40 +20,37 @@ export default class DaikinPlatformLogger {
         if(this.logger !== undefined)
           this.logger.debug(messages[i]);
         else
-          this.tsLogger.debug(messages[i]);
+          console.debug(messages[i]);
         
 
       }
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   info(...messages: any[]) {
     for (let i = 0; i < messages.length; i++) {
       if(this.logger !== undefined)
         this.logger.info(messages[i]);
       else
-        this.tsLogger.info(messages[i]);
+        console.info(messages[i]);
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   warn(...messages: any[]) {
     for (let i = 0; i < messages.length; i++) {
       if(this.logger !== undefined)
         this.logger.warn(messages[i]);
       else
-        this.tsLogger.warn(messages[i]);
+        console.warn(messages[i]);
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   error(...messages: any[]) {
     for (let i = 0; i < messages.length; i++) {
       if(this.logger !== undefined)
         this.logger.error(messages[i]);
       else
-        this.tsLogger.error(messages[i]);
+        console.error(messages[i]);
     }
   }
 }

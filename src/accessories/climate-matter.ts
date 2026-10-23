@@ -268,7 +268,7 @@ export default class ClimateMatterAccessory {
   // attaches to the rebuilt endpoint again.
   public composeThermostat() {
     const matter = this.platform.api.matter!;
-    const features: string[] = [];
+    const features: ('Heating' | 'Cooling' | 'AutoMode')[] = [];
     if (this.supportsHeat) {
       features.push('Heating');
     }
