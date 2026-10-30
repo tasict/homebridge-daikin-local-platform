@@ -29,7 +29,7 @@ Each configured unit appears as one accessory with:
 * **Heater Cooler** — power, operation mode (only the modes the unit actually supports; see also `climateCoolingOnly`), target temperature and the current room temperature (or the target temperature in its place, see `climateSetpointAsTemperature`).
 * **Swing** — the standard HomeKit swing toggle, on units with swing-capable vanes (on = every supported axis swings, off = vanes fixed). Separate per-axis switches are available as an option, see `climateSwingSwitches`.
 * **Fan** — speed steps 0–6: 0 = automatic, 1 = quiet, 2–6 = fan levels 1–5. Turning the fan off selects automatic speed.
-* **Humidity sensor** and **outdoor temperature sensor**, on units that report those readings.
+* **Humidity sensor** and **outdoor temperature sensor**, on units that report those readings. The outdoor sensor can also be its own accessory, which you can put in another room than the unit, or be hidden — see `climateOutdoorSeparate` and `climateOutdoorHidden`.
 
 ## Matter and energy (Beta) — new in 2.0.0
 
@@ -89,6 +89,8 @@ In the settings UI, the device list scans your local network automatically (UDP 
         "climateMatterMigration": ["ipv4-here"],
         "climateMatterSwing": ["ipv4-here"],
         "climateSetpointAsTemperature": ["ipv4-here"],
+        "climateOutdoorSeparate": ["ipv4-here"],
+        "climateOutdoorHidden": ["ipv4-here"],
         "language": "en",
         "debugMode": false,
     }
@@ -129,6 +131,12 @@ Units published over both HomeKit and Matter while moving them to Matter (step 2
 
 * `climateSetpointAsTemperature` (array):
 Units whose tile in the Home app shows the target temperature instead of the unit's own room temperature reading, by IP address exactly as written in `climateIPs` — for units whose built-in sensor reads far off the real room temperature (e.g. mounted high up). In a mode without a target temperature (fan, dry) the cooling target is shown. Whether the tile shows heating or cooling still follows the unit's own sensor, since that is what the unit acts on. Applies over HomeKit and Matter. In the Homebridge UI this is *Show setpoint as temperature* in the device's edit form.
+
+* `climateOutdoorSeparate` (array):
+Units whose outdoor temperature sensor is an accessory of its own, by IP address exactly as written in `climateIPs`. By default the sensor is part of the unit's accessory, so the Home app keeps it in the unit's room; as its own accessory (named after the unit, e.g. *Study Outdoor Temperature*) it can go in any room, such as one for your garden. Over Matter the sensor is always an accessory of its own. In the Homebridge UI this is *Outdoor temperature* → *Separate* in the device's edit form. Switching moves the sensor to a new accessory, so its room and automations need setting up again.
+
+* `climateOutdoorHidden` (array):
+Units that publish no outdoor temperature sensor, by IP address exactly as written in `climateIPs`; takes precedence over `climateOutdoorSeparate`. Units that share an outdoor unit report the same reading, so you can keep it on one unit and hide it on the others. Applies over HomeKit and Matter. In the Homebridge UI this is *Outdoor temperature* → *Hidden* in the device's edit form, where *Hide on the other units* hides it on every other unit in one step.
 
 * `language` (string):
 Language for the default HomeKit names of the switches and sensors this plugin creates — e.g. *Outdoor Temperature*, *Vertical Swing*, *Horizontal Swing* — which HomeKit does not translate itself. The options are the same language codes as the Homebridge UI language setting (`en`, `de`, `zh-TW`, `ja`, ...), and the plugin settings UI defaults the dropdown to the language your Homebridge UI is displayed in. Defaults are only applied while a service still carries a plugin-default name: anything you renamed in the Home app is never touched, and changing the language later renames only the untouched services. Absent means English.
