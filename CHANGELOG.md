@@ -3,6 +3,7 @@
 ## 2.2.0 (2026-10-30)
 
 - Added a per-device *Outdoor temperature* option ([#22](https://github.com/tasict/homebridge-daikin-local-platform/issues/22)): a unit's outdoor temperature sensor can now be an accessory of its own, which the Home app lets you put in another room than the unit (e.g. a Garden room), or be hidden. Units that share an outdoor unit report the same reading, so you can keep it on one unit and hide it on the others — *Hide on the other units* in the edit form does that in one step, and a preview there shows where the sensor ends up in the Home app. Configured from the device's edit form in the settings UI — such units show an *outdoor separate* or *outdoor hidden* chip in the device list — or via the new `climateOutdoorSeparate` and `climateOutdoorHidden` config arrays (same rules as `climateCoolingOnly`). Over Matter the sensor already is an accessory of its own, so only *Hidden* changes anything there. Moving the sensor makes it a new accessory in the Home app, so its room and automations need setting up again.
+- Security: updated every dependency to its latest compatible release; `npm audit` reports no known vulnerabilities. The plugin now requires axios 1.21.0 or later, and follow-redirects (used by axios) moves to 1.16.2, which fixes two advisories about credential headers being passed on after a cross-origin redirect. The plugin only talks to air conditioners on your network and sends no such headers, so it was not affected in practice.
 
 ## 2.1.2 (2026-10-23)
 
