@@ -14,6 +14,7 @@ import ClimateAccessory from './accessories/climate';
 import ClimateMatterAccessory, { thermostatFeatureSignature } from './accessories/climate-matter';
 import DaikinPlatformLogger from './logger';
 import { DaikinAccessoryContext, DaikinPlatformConfig } from './types';
+import { getServiceNames } from './i18n';
 import {
   PLATFORM_NAME,
   PLUGIN_NAME,
@@ -129,6 +130,18 @@ export default class DaikinPlatform implements DynamicPlatformPlugin {
     return this.configListHas(this.platformConfig.climateMatterSwing, ip);
   }
 
+  // Where a unit's outdoor temperature sensor goes (issue #22): on the unit's
+  // accessory, so in its room; on an accessory of its own
+  // (climateOutdoorSeparate) that the Home app can put in any room; or
+  // nowhere (climateOutdoorHidden, which wins). Over Matter, 'unit' acts like
+  // 'separate': Apple Home ignores the names of tiles inside an accessory.
+  outdoorSensorMode(ip: string | undefined): 'unit' | 'separate' | 'hidden' {
+    if (this.configListHas(this.platformConfig.climateOutdoorHidden, ip)) {
+      return 'hidden';
+    }
+    return this.configListHas(this.platformConfig.climateOutdoorSeparate, ip) ? 'separate' : 'unit';
+  }
+
   // The temperature a unit's tile shows: the indoor reading, or with
   // climateSetpointAsTemperature the setpoint — the current mode's target,
   // else (fan and dry have none) the cooling one. Heating/cooling status
@@ -166,6 +179,7 @@ export default class DaikinPlatform implements DynamicPlatformPlugin {
     }
 
     const matterClimates: ClimateMatterAccessory[] = [];
+    const names = getServiceNames(this.platformConfig.language);
 
     await this.daikinLocalAPI.fetchDevices(this.platformConfig.climateIPs, climateKeys).then((devices) => {
 
@@ -198,7 +212,19 @@ export default class DaikinPlatform implements DynamicPlatformPlugin {
           const existingAccessory = this.accessories.find(accessory => accessory.UUID === uuid);
   
           this.DaikinDevices[devices[i].getMacAddress()] = devices[i];
-  
+
+          // The outdoor sensor as an accessory of its own (climateOutdoorSeparate),
+          // registered after the unit's handler has added its service.
+          let outdoorAccessory: PlatformAccessory<DaikinAccessoryContext> | undefined;
+          if (this.outdoorSensorMode(devices[i].IP) === 'separate' && devices[i].supportsOutdoorTemperature()) {
+            const outdoorUUID = this.api.hap.uuid.generate(`${devices[i].getMacAddress()}:outdoor`);
+            outdoorAccessory = this.accessories.find(accessory => accessory.UUID === outdoorUUID)
+              ?? new this.api.platformAccessory<DaikinAccessoryContext>(
+                `${devices[i].getDeviceName() || names.airConditioner} ${names.outdoorTemperature}`, outdoorUUID);
+            outdoorAccessory.context.device = devices[i];
+            outdoorAccessory.context.role = 'outdoor';
+          }
+
           if (existingAccessory !== undefined) {
             // The accessory already exists
             this.log.info(`Restoring accessory '${existingAccessory.displayName}' `
@@ -210,7 +236,7 @@ export default class DaikinPlatform implements DynamicPlatformPlugin {
             this.api.updatePlatformAccessories([existingAccessory]);
   
             // Create the accessory handler for the restored accessory
-            this.createDaikinAccessory(devices[i], this, existingAccessory);
+            this.createDaikinAccessory(devices[i], this, existingAccessory, outdoorAccessory);
   
           } else {
             this.log.info(`Adding accessory '${devices[i].getDeviceName()}' (${devices[i].getMacAddress()}).`);
@@ -224,10 +250,17 @@ export default class DaikinPlatform implements DynamicPlatformPlugin {
   
             // Create the accessory handler for the newly create accessory
             // this is imported from `platformAccessory.ts`
-            this.createDaikinAccessory(devices[i], this, accessory);
+            this.createDaikinAccessory(devices[i], this, accessory, outdoorAccessory);
   
             // Link the accessory to your platform
             this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+          }
+
+          if (outdoorAccessory && this.accessories.includes(outdoorAccessory)) {
+            this.api.updatePlatformAccessories([outdoorAccessory]);
+          } else if (outdoorAccessory) {
+            this.log.info(`Adding accessory '${outdoorAccessory.displayName}' (${devices[i].getMacAddress()}).`);
+            this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [outdoorAccessory]);
           }
         }
         catch (e) {
@@ -250,7 +283,10 @@ export default class DaikinPlatform implements DynamicPlatformPlugin {
     // config, or when another unit answers at that IP (adapter replaced); a
     // configured unit that is merely offline keeps its accessory. Restored
     // from disk, context.device is only the saved { IP } (no methods).
-    const liveUUIDs = new Set(Object.keys(this.DaikinDevices).map((mac) => this.api.hap.uuid.generate(mac)));
+    // A unit's separate outdoor sensor goes with it (one no longer wanted is
+    // already gone, see reconcileProtocolSwitches).
+    const liveUUIDs = new Set(Object.keys(this.DaikinDevices).flatMap((mac) =>
+      [mac, `${mac}:outdoor`].map((seed) => this.api.hap.uuid.generate(seed))));
     const liveIPs = new Set(Object.values(this.DaikinDevices).map((device) => device.IP));
 
     for (const cachedAccessory of this.accessories) {
@@ -313,8 +349,11 @@ export default class DaikinPlatform implements DynamicPlatformPlugin {
 
     for (const cachedAccessory of [...this.accessories]) {
       const ip = cachedAccessory.context.device?.IP;
-      if (this.resolveProtocol(ip) === 'matter') {
-        this.log.info(`Removing HomeKit accessory '${cachedAccessory.displayName}' because it is now published over Matter.`);
+      const reason = this.resolveProtocol(ip) === 'matter' ? 'it is now published over Matter'
+        : cachedAccessory.context.role === 'outdoor' && this.outdoorSensorMode(ip) !== 'separate'
+          ? 'the outdoor temperature is no longer a separate accessory' : undefined;
+      if (reason) {
+        this.log.info(`Removing HomeKit accessory '${cachedAccessory.displayName}' because ${reason}.`);
         this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [cachedAccessory]);
         this.accessories.splice(this.accessories.indexOf(cachedAccessory), 1);
       }
@@ -327,12 +366,15 @@ export default class DaikinPlatform implements DynamicPlatformPlugin {
     for (const cached of this.matterAccessories.values()) {
       const ip = cached.context?.ip as string | undefined;
       // The unit's companion accessories (fan, sensors, swing) go with it;
-      // swing also when its option was switched off.
-      const wanted = cached.context?.role === 'swing' ? this.isMatterSwingEnabled(ip) : true;
+      // swing and the outdoor sensor also when their option says so.
+      const role = cached.context?.role;
+      const wanted = role === 'swing' ? this.isMatterSwingEnabled(ip)
+        : role === 'outdoor' ? this.outdoorSensorMode(ip) !== 'hidden' : true;
       if (wanted && this.resolveProtocol(ip) !== 'hap' && this.configListHas(this.platformConfig.climateIPs, ip)) {
         continue;
       }
-      this.log.info(`Removing Matter accessory '${cached.displayName}' because it is no longer published over Matter.`);
+      this.log.info(`Removing Matter accessory '${cached.displayName}' because `
+        + (wanted ? 'it is no longer published over Matter.' : 'its option in the unit\'s settings is off.'));
       try {
         await this.api.matter.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [cached]);
       }
@@ -370,9 +412,10 @@ export default class DaikinPlatform implements DynamicPlatformPlugin {
   createDaikinAccessory(
     device: DaikinDevice,
     platform: DaikinPlatform,
-    accessory: PlatformAccessory<DaikinAccessoryContext>) {
+    accessory: PlatformAccessory<DaikinAccessoryContext>,
+    outdoorAccessory?: PlatformAccessory<DaikinAccessoryContext>) {
 
-      new ClimateAccessory(platform, accessory);
+      new ClimateAccessory(platform, accessory, outdoorAccessory);
 
   }
 

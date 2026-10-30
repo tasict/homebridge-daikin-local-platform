@@ -26,6 +26,13 @@ export interface DaikinPlatformConfig extends PlatformConfig {
   // climateIPs entries of units whose tile shows the setpoint in place of
   // the indoor reading (built-in sensor far off the room, issue #20).
   climateSetpointAsTemperature?: Array<string>;
+  // climateIPs entries of units whose outdoor temperature sensor is an
+  // accessory of its own, so the Home app can put it in another room than
+  // the unit (issue #22). Over Matter it always is.
+  climateOutdoorSeparate?: Array<string>;
+  // climateIPs entries of units that publish no outdoor temperature sensor
+  // (takes precedence over climateOutdoorSeparate).
+  climateOutdoorHidden?: Array<string>;
   // Language for the default HomeKit names of plugin-created services (see
   // src/i18n.ts). Same codes as the Homebridge UI languages; the settings
   // UI defaults it to the language selected there. Absent = English.
@@ -35,6 +42,9 @@ export interface DaikinPlatformConfig extends PlatformConfig {
 
 export interface DaikinAccessoryContext {
   device: DaikinDevice;
+  // Set on a unit's other accessories: 'outdoor' = its separate outdoor
+  // temperature sensor (climateOutdoorSeparate).
+  role?: string;
 }
 
 

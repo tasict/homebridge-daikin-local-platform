@@ -74,6 +74,20 @@
           "type": "string"
         }
       },
+      "climateOutdoorSeparate": {
+        "type": "array",
+        "description": "Units whose outdoor temperature sensor is an accessory of its own instead of part of the unit's accessory, so the Home app can put it in another room, by IP exactly as written in climateIPs. Over Matter the sensor always is. Edited from the device list in the settings UI.",
+        "items": {
+          "type": "string"
+        }
+      },
+      "climateOutdoorHidden": {
+        "type": "array",
+        "description": "Units that publish no outdoor temperature sensor, by IP exactly as written in climateIPs (takes precedence over climateOutdoorSeparate). Units on the same outdoor unit report the same reading. Edited from the device list in the settings UI.",
+        "items": {
+          "type": "string"
+        }
+      },
       "language": {
         "title": "HomeKit Name Language",
         "description": "Language for the default HomeKit names of the switches and sensors this plugin creates (e.g. Outdoor Temperature, Vertical Swing, Horizontal Swing). Same options as the Homebridge UI language; the settings UI defaults it to the language selected there. Names changed in the Home app are never touched.",

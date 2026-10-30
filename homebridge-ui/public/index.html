@@ -59,6 +59,33 @@
   .dlp-mode-chip { font-size: 12px; font-weight: 600; border: 1px solid #0d6efd; border-radius: 999px; padding: 0 11px; }
   .dlp-mode-chip.dlp-cut { opacity: 0.45; text-decoration: line-through; border-style: dashed; border-color: currentColor; }
   .dlp-cap { flex-basis: 100%; font-size: 11.5px; opacity: 0.7; }
+  /* Outdoor temperature: a segmented choice and a Home-app preview of where
+     the sensor lands. Tiles inside one outline are one accessory, so they
+     share its room; a dashed, struck tile is one the Home app won't show
+     (the same "hidden" look as the cut mode chips and dlp-chip-off). */
+  .dlp-chip.dlp-chip-off, body.dark-mode .dlp-chip.dlp-chip-off { border-style: dashed; background: transparent; opacity: 0.75; }
+  .dlp-seg { display: inline-flex; max-width: 100%; margin-top: 8px; padding: 2px; gap: 2px; border: 1px solid #ced4da; border-radius: 8px; }
+  body.dark-mode .dlp-seg { border-color: #3e4144; }
+  .dlp-seg label { position: relative; min-width: 0; margin: 0; }
+  .dlp-seg input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+  .dlp-seg span { display: block; padding: 3px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; white-space: nowrap; opacity: 0.75; transition: background-color 0.15s, color 0.15s; }
+  .dlp-seg input:hover + span { opacity: 1; }
+  .dlp-seg input:checked + span { background: #0d6efd; color: #fff; opacity: 1; }
+  .dlp-seg input:focus-visible + span { outline: 2px solid #0d6efd; outline-offset: 2px; }
+  .dlp-rooms { display: flex; flex-wrap: wrap; gap: 8px 18px; min-width: 0; }
+  .dlp-room { min-width: 0; max-width: 100%; }
+  .dlp-room-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.6; margin-bottom: 3px; }
+  .dlp-acc { display: inline-flex; flex-wrap: wrap; gap: 3px; max-width: 100%; padding: 2px; border: 1px solid rgba(13, 110, 253, 0.35); border-radius: 9px; }
+  body.dark-mode .dlp-acc { border-color: rgba(110, 168, 254, 0.4); }
+  .dlp-tile { display: inline-flex; align-items: center; gap: 5px; min-width: 0; max-width: 100%; padding: 2px 9px 2px 7px; border: 1px solid transparent; border-radius: 7px; background: #fff; box-shadow: 0 1px 1px rgba(0, 0, 0, 0.08); font-size: 12px; font-weight: 600; }
+  body.dark-mode .dlp-tile { background: rgba(255, 255, 255, 0.1); box-shadow: none; }
+  .dlp-tile svg { flex-shrink: 0; width: 12px; height: 12px; }
+  .dlp-tile-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dlp-tile.dlp-cut, body.dark-mode .dlp-tile.dlp-cut { background: transparent; box-shadow: none; border-style: dashed; border-color: currentColor; opacity: 0.45; text-decoration: line-through; }
+  .dlp-bulk { margin-top: 8px; }
+  @media (prefers-reduced-motion: reduce) {
+    .dlp-seg span, .dlp-sw .dlp-track, .dlp-sw .dlp-track::after { transition: none; }
+  }
   .dlp-pairing { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
   .dlp-qr { width: 132px; height: 132px; background: #fff; border-radius: 6px; padding: 4px; flex-shrink: 0; }
   .dlp-qr svg { width: 100%; height: 100%; display: block; }
@@ -89,8 +116,9 @@
      option rows: the 13-digit BRP072C key (climateKeys), the cooling-only
      flag (climateCoolingOnly), the swing-switches flag
      (climateSwingSwitches), the setpoint-as-temperature flag
-     (climateSetpointAsTemperature) and the Matter choice (climateMatter /
-     climateMatterMigration) — there are no
+     (climateSetpointAsTemperature), where the outdoor temperature sensor
+     goes (climateOutdoorSeparate / climateOutdoorHidden) and the Matter
+     choice (climateMatter / climateMatterMigration) — there are no
      separate sections for them.
      The scan runs automatically when the page opens. -->
 <div class="card mb-3">
@@ -203,6 +231,8 @@
     matter: '<svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="8" cy="3" r="1.6"/><circle cx="3" cy="12.5" r="1.6"/><circle cx="13" cy="12.5" r="1.6"/><path d="M8 4.6v4.2M4.4 11.6 8 8.8l3.6 2.8"/></svg>',
     thermo: '<svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M6.5 9.4V3a1.5 1.5 0 0 1 3 0v6.4a3 3 0 1 1-3 0z"/></svg>',
     swing: '<svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M8 2v12M6 4l2-2 2 2M6 12l2 2 2-2M2 8h12M4 6 2 8l2 2M12 6l2 2-2 2"/></svg>',
+    outdoor: '<svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="8" cy="8" r="2.7"/><path d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1"/></svg>',
+    unit: '<svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="1.5" y="3" width="13" height="6.5" rx="1.5"/><path d="M4.5 7h7M5 12.5l-1 1.5M8 12.5V14M11 12.5l1 1.5"/></svg>',
   };
 
   function iconButton(icon, className, title) {
@@ -221,11 +251,13 @@
   // `orig` snapshots the row when an edit opens so Cancel/Esc can revert);
   // climateKeys entries that match no device survive in orphanKeys until the
   // user adopts them back or deletes them — never dropped silently.
-  let deviceRows = [];              // [{ value: "<ip[:port]>", key?, coolOnly?, swingSwitches?, setpoint?, matter?, matterMigration?, editing?, ... }]
+  let deviceRows = [];              // [{ value: "<ip[:port]>", key?, coolOnly?, swingSwitches?, setpoint?, outdoorSeparate?, outdoorHidden?, matter?, matterMigration?, editing?, ... }]
   let orphanKeys = [];              // [{ ip, key }]
   let orphanCoolingOnly = [];       // climateCoolingOnly entries matching no device
   let orphanSwingSwitches = [];     // climateSwingSwitches entries matching no device
   let orphanSetpoint = [];          // climateSetpointAsTemperature entries matching no device
+  let orphanOutdoorSeparate = [];   // climateOutdoorSeparate entries matching no device
+  let orphanOutdoorHidden = [];     // climateOutdoorHidden entries matching no device
   let orphanMatter = [];            // climateMatter entries matching no device
   let orphanMatterMigration = [];   // climateMatterMigration entries matching no device
   let orphanMatterSwing = [];       // climateMatterSwing entries matching no device
@@ -265,6 +297,21 @@
       row.matter = true;
     } else if (choice === 'migrate') {
       row.matterMigration = true;
+    }
+  };
+
+  // Where the outdoor temperature sensor goes: row.outdoorHidden
+  // (climateOutdoorHidden) wins over row.outdoorSeparate
+  // (climateOutdoorSeparate), as in the platform; neither = on the unit.
+  const OUTDOOR_CHOICES = [['unit', 'With the unit'], ['separate', 'Separate'], ['hidden', 'Hidden']];
+  const outdoorChoice = (row) => (row.outdoorHidden ? 'hidden' : row.outdoorSeparate ? 'separate' : 'unit');
+  const setOutdoorChoice = (row, choice) => {
+    delete row.outdoorSeparate;
+    delete row.outdoorHidden;
+    if (choice === 'separate') {
+      row.outdoorSeparate = true;
+    } else if (choice === 'hidden') {
+      row.outdoorHidden = true;
     }
   };
 
@@ -400,6 +447,29 @@
       delete config.climateSetpointAsTemperature;
     }
 
+    // Outdoor sensor placement, same shape and rules as climateCoolingOnly.
+    const outdoorSeparateEntries = deviceRows
+      .filter((row) => row.value.trim() !== '' && row.outdoorSeparate === true)
+      .map((row) => row.value.trim())
+      .concat(orphanOutdoorSeparate);
+
+    if (outdoorSeparateEntries.length > 0) {
+      config.climateOutdoorSeparate = outdoorSeparateEntries;
+    } else {
+      delete config.climateOutdoorSeparate;
+    }
+
+    const outdoorHiddenEntries = deviceRows
+      .filter((row) => row.value.trim() !== '' && row.outdoorHidden === true)
+      .map((row) => row.value.trim())
+      .concat(orphanOutdoorHidden);
+
+    if (outdoorHiddenEntries.length > 0) {
+      config.climateOutdoorHidden = outdoorHiddenEntries;
+    } else {
+      delete config.climateOutdoorHidden;
+    }
+
     // Matter flags, same shape and rules as climateCoolingOnly.
     const matterEntries = deviceRows
       .filter((row) => row.value.trim() !== '' && row.matter === true)
@@ -507,6 +577,8 @@
     adoptOrphanFlag(orphanCoolingOnly, row, 'coolOnly');
     adoptOrphanFlag(orphanSwingSwitches, row, 'swingSwitches');
     adoptOrphanFlag(orphanSetpoint, row, 'setpoint');
+    adoptOrphanFlag(orphanOutdoorSeparate, row, 'outdoorSeparate');
+    adoptOrphanFlag(orphanOutdoorHidden, row, 'outdoorHidden');
     adoptOrphanFlag(orphanMatter, row, 'matter');
     adoptOrphanFlag(orphanMatterMigration, row, 'matterMigration');
     adoptOrphanFlag(orphanMatterSwing, row, 'matterSwing');
@@ -530,6 +602,8 @@
       [row.coolOnly, orphanCoolingOnly],
       [row.swingSwitches, orphanSwingSwitches],
       [row.setpoint, orphanSetpoint],
+      [row.outdoorSeparate, orphanOutdoorSeparate],
+      [row.outdoorHidden, orphanOutdoorHidden],
       [row.matter, orphanMatter],
       [row.matterMigration, orphanMatterMigration],
       [row.matterSwing, orphanMatterSwing],
@@ -547,6 +621,8 @@
     coolOnly: row.coolOnly === true,
     swingSwitches: row.swingSwitches === true,
     setpoint: row.setpoint === true,
+    outdoorSeparate: row.outdoorSeparate === true,
+    outdoorHidden: row.outdoorHidden === true,
     matter: row.matter === true,
     matterMigration: row.matterMigration === true,
     matterSwing: row.matterSwing === true,
@@ -612,6 +688,13 @@
       chip.className = 'dlp-chip';
       chip.innerHTML = ICONS.thermo;
       chip.appendChild(document.createTextNode('setpoint'));
+      title.appendChild(chip);
+    }
+    if (opts.outdoor && opts.outdoor !== 'unit') {
+      const chip = document.createElement('span');
+      chip.className = opts.outdoor === 'hidden' ? 'dlp-chip dlp-chip-off' : 'dlp-chip';
+      chip.innerHTML = ICONS.outdoor;
+      chip.appendChild(document.createTextNode(opts.outdoor === 'hidden' ? 'outdoor hidden' : 'outdoor separate'));
       title.appendChild(chip);
     }
     if (opts.matter && opts.matter !== 'hap') {
@@ -704,6 +787,7 @@
       delete row.secureManual;
       delete row.focus;
       delete row.focusKey;
+      delete row.focusOutdoor;
       delete row.orig;
     };
 
@@ -753,6 +837,7 @@
       } else {
         delete row.setpoint;
       }
+      setOutdoorChoice(row, outdoorChoice(orig));
       setMatterChoice(row, orig.matter ? 'matter' : orig.matterMigration ? 'migrate' : 'hap');
       if (orig.matterSwing) {
         row.matterSwing = true;
@@ -984,6 +1069,129 @@
     setpoint.opt.appendChild(setpointSwitch.label);
     options.appendChild(setpoint.opt);
 
+    // Outdoor temperature (issue #22): with the unit (its room), separate
+    // (any room) or hidden — previewed as Home-app tiles.
+    const outdoor = optionRow('Outdoor temperature',
+      'Where the outdoor unit\'s temperature shows in the Home app. Units that share an '
+      + 'outdoor unit report the same reading: keep it on one and hide it on the others.');
+    const seg = document.createElement('div');
+    seg.className = 'dlp-seg';
+    seg.setAttribute('role', 'radiogroup');
+    seg.setAttribute('aria-label', 'Outdoor temperature');
+    let outdoorInput = null;
+    for (const [value, label] of OUTDOOR_CHOICES) {
+      const option = document.createElement('label');
+      const input = document.createElement('input');
+      input.type = 'radio';
+      input.name = `dlpOutdoor${index}`;
+      input.value = value;
+      input.checked = outdoorChoice(row) === value;
+      if (input.checked) {
+        outdoorInput = input;
+      }
+      input.addEventListener('change', () => {
+        setOutdoorChoice(row, value);
+        renderOutdoor();
+        sync();
+      });
+      const text = document.createElement('span');
+      text.textContent = label;
+      option.appendChild(input);
+      option.appendChild(text);
+      seg.appendChild(option);
+    }
+    outdoor.main.appendChild(seg);
+
+    const outdoorPreview = document.createElement('div');
+    outdoorPreview.className = 'dlp-preview';
+    const rooms = document.createElement('div');
+    rooms.className = 'dlp-rooms';
+    rooms.setAttribute('aria-hidden', 'true');
+    const outdoorCaption = document.createElement('span');
+    outdoorCaption.className = 'dlp-cap';
+    outdoorCaption.setAttribute('aria-live', 'polite');
+    outdoorPreview.appendChild(rooms);
+    outdoorPreview.appendChild(outdoorCaption);
+    outdoor.main.appendChild(outdoorPreview);
+
+    const bulkHide = document.createElement('button');
+    bulkHide.type = 'button';
+    bulkHide.className = 'btn btn-sm btn-outline-secondary dlp-bulk';
+    bulkHide.addEventListener('click', () => {
+      const others = configuredRows().filter((other) => other !== row && outdoorChoice(other) !== 'hidden');
+      others.forEach((other) => setOutdoorChoice(other, 'hidden'));
+      row.focusOutdoor = true;
+      renderDevices();
+      sync();
+      homebridge.toast.info(`Outdoor temperature hidden on ${others.length} other unit${others.length === 1 ? '' : 's'}.`,
+        'Outdoor temperature');
+    });
+    outdoor.main.appendChild(bulkHide);
+
+    const tile = (icon, name, cut) => {
+      const span = document.createElement('span');
+      span.className = cut ? 'dlp-tile dlp-cut' : 'dlp-tile';
+      span.innerHTML = ICONS[icon];
+      const label = document.createElement('span');
+      label.className = 'dlp-tile-name';
+      label.textContent = name;
+      span.appendChild(label);
+      return span;
+    };
+    const room = (title, ...tiles) => {
+      const box = document.createElement('div');
+      box.className = 'dlp-room';
+      const heading = document.createElement('div');
+      heading.className = 'dlp-room-label';
+      heading.textContent = title;
+      const accessory = document.createElement('div');
+      accessory.className = 'dlp-acc';
+      tiles.forEach((item) => accessory.appendChild(item));
+      box.appendChild(heading);
+      box.appendChild(accessory);
+      return box;
+    };
+
+    // Over Matter alone, "with the unit" is a separate accessory as well:
+    // Apple Home ignores the names of tiles inside a Matter accessory.
+    const renderOutdoor = () => {
+      const info = scanInfoFor(row.value);
+      const unitName = (info && info.name) || 'This unit';
+      const sensorName = info && info.name ? `${info.name} Outdoor Temperature` : 'Outdoor Temperature';
+      const effective = (choice) => (choice === 'unit' && matterChoice(row) === 'matter' ? 'separate' : choice);
+      const choice = outdoorChoice(row);
+      const shown = effective(choice);
+
+      rooms.innerHTML = '';
+      if (shown === 'separate') {
+        rooms.appendChild(room('Unit\'s room', tile('unit', unitName)));
+        rooms.appendChild(room('Any room', tile('outdoor', sensorName)));
+      } else {
+        rooms.appendChild(room('Unit\'s room', tile('unit', unitName), tile('outdoor', 'Outdoor Temperature', shown === 'hidden')));
+      }
+
+      const lines = [{
+        unit: 'Part of the unit\'s accessory, so it stays in the unit\'s room.',
+        separate: 'An accessory of its own, named after the unit: move it to any room, such as Garden.',
+        hidden: 'Not shown in the Home app.',
+      }[shown]];
+      if (choice === 'unit' && matterChoice(row) !== 'hap') {
+        lines.push('Over Matter it is always an accessory of its own.');
+      }
+      if (row.orig && shown !== effective(outdoorChoice(row.orig))) {
+        lines.push(shown === 'hidden'
+          ? 'After a restart it leaves the Home app, and automations that use it stop working.'
+          : 'After a restart the Home app shows it as a new sensor: set up its room and automations again.');
+      }
+      outdoorCaption.textContent = lines.join(' ');
+
+      const others = configuredRows().filter((other) => other !== row && outdoorChoice(other) !== 'hidden').length;
+      bulkHide.textContent = `Hide on the other ${others === 1 ? 'unit' : `${others} units`}`;
+      bulkHide.style.display = choice !== 'hidden' && others > 0 ? '' : 'none';
+    };
+    renderOutdoor();
+    options.appendChild(outdoor.opt);
+
     // Matter
     {
       const matter = optionRow('Matter (Beta)',
@@ -1030,11 +1238,12 @@
       select.addEventListener('change', () => {
         setMatterChoice(row, select.value);
         swingOpt.opt.style.display = select.value === 'hap' ? 'none' : '';
+        renderOutdoor();
         sync();
       });
     }
 
-    return { form, ipInput, keyInput };
+    return { form, ipInput, keyInput, outdoorInput };
   }
 
   // First setup: how the plugin connects to Apple Home. Shown until a unit
@@ -1095,10 +1304,13 @@
     // Configured units first, in config order.
     deviceRows.forEach((row, index) => {
       if (row.editing) {
-        const { form, ipInput, keyInput } = renderEditForm(row, index);
+        const { form, ipInput, keyInput, outdoorInput } = renderEditForm(row, index);
         if (row.focusKey && keyInput) {
           delete row.focusKey;
           pendingFocus = keyInput;
+        } else if (row.focusOutdoor) {
+          delete row.focusOutdoor;
+          pendingFocus = outdoorInput;
         } else if (row.focus) {
           delete row.focus;
           pendingFocus = ipInput;
@@ -1116,6 +1328,7 @@
         coolOnly: row.coolOnly === true,
         swingSwitches: row.swingSwitches === true,
         setpoint: row.setpoint === true,
+        outdoor: outdoorChoice(row),
         matter: matterChoice(row),
       }));
 
@@ -1503,7 +1716,7 @@
     }
   }
 
-  // Attach climateCoolingOnly / climateSwingSwitches / climateSetpointAsTemperature / climateMatter / climateMatterMigration entries to their device
+  // Attach climateCoolingOnly / climateSwingSwitches / climateSetpointAsTemperature / climateOutdoor* / climateMatter* entries to their device
   // rows — exact entry first, then bare IP, same repair rules as climateKeys.
   // Leftovers ride along in the orphan lists (and are written back verbatim)
   // so a device removed and re-added later gets its flags back.
@@ -1524,6 +1737,8 @@
   loadFlagList(config.climateCoolingOnly, 'coolOnly', orphanCoolingOnly);
   loadFlagList(config.climateSwingSwitches, 'swingSwitches', orphanSwingSwitches);
   loadFlagList(config.climateSetpointAsTemperature, 'setpoint', orphanSetpoint);
+  loadFlagList(config.climateOutdoorSeparate, 'outdoorSeparate', orphanOutdoorSeparate);
+  loadFlagList(config.climateOutdoorHidden, 'outdoorHidden', orphanOutdoorHidden);
   loadFlagList(config.climateMatter, 'matter', orphanMatter);
   loadFlagList(config.climateMatterMigration, 'matterMigration', orphanMatterMigration);
   loadFlagList(config.climateMatterSwing, 'matterSwing', orphanMatterSwing);

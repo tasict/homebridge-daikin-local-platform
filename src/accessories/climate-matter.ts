@@ -234,7 +234,8 @@ export default class ClimateMatterAccessory {
         clusters: { relativeHumidityMeasurement: this.humidityState() },
       });
     }
-    if (device.supportsOutdoorTemperature()) {
+    // Always an accessory of its own here; climateOutdoorHidden drops it.
+    if (device.supportsOutdoorTemperature() && platform.outdoorSensorMode(device.IP) !== 'hidden') {
       this.outdoorAccessory = companion('outdoor', names.outdoorTemperature, matter.deviceTypes.TemperatureSensor, {
         clusters: { temperatureMeasurement: this.outdoorState() ?? { measuredValue: null } },
       });

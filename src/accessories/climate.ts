@@ -39,6 +39,9 @@ export default class ClimateAccessory {
   constructor(
     private readonly platform: DaikinPlatform,
     private readonly accessory: PlatformAccessory<DaikinAccessoryContext>,
+    // The unit's outdoor temperature sensor as an accessory of its own
+    // (climateOutdoorSeparate); the platform registers it.
+    outdoorAccessory?: PlatformAccessory<DaikinAccessoryContext>,
   ) {
 
 
@@ -48,23 +51,10 @@ export default class ClimateAccessory {
 
     // Accessory Information
     // https://developers.homebridge.io/#/service/AccessoryInformation
-    this.accessory.getService(this.platform.Service.AccessoryInformation)
-      ?.setCharacteristic(
-        this.platform.Characteristic.Manufacturer,
-        'Daikin ' + accessory.context.device?.getDeviceReg(),
-      )
-      .setCharacteristic(
-        this.platform.Characteristic.Model,
-        accessory.context.device?.getDeviceType() || 'Unknown',
-      )
-      .setCharacteristic(
-        this.platform.Characteristic.SerialNumber,
-        accessory.context.device?.getMacAddress() || 'Unknown',
-      )
-      .setCharacteristic(
-        this.platform.Characteristic.FirmwareRevision,
-        accessory.context.device?.getFirmwareVersion() || 'Unknown',
-      );
+    this.setAccessoryInformation(accessory, accessory.context.device?.getMacAddress() || 'Unknown');
+    if (outdoorAccessory) {
+      this.setAccessoryInformation(outdoorAccessory, `${accessory.context.device?.getMacAddress()}-outdoor`);
+    }
 
     this.services['Climate'] = this.accessory.getService(this.platform.Service.HeaterCooler)
       || this.accessory.addService(this.platform.Service.HeaterCooler);
@@ -271,7 +261,8 @@ export default class ClimateAccessory {
     // Legacy (BRP069) units often have no humidity / outdoor-temperature
     // sensor; only expose the services the device can actually feed.
     this._supportsHumidity = accessory.context.device?.supportsIndoorHumidity() ?? true;
-    this._supportsOutdoorTemperature = accessory.context.device?.supportsOutdoorTemperature() ?? true;
+    this._supportsOutdoorTemperature = (accessory.context.device?.supportsOutdoorTemperature() ?? true)
+      && platform.outdoorSensorMode(accessory.context.device?.IP) !== 'hidden';
 
     if (this._supportsHumidity) {
       this.services['HumiditySensor'] = this.accessory.getService(this.platform.Service.HumiditySensor)
@@ -287,14 +278,28 @@ export default class ClimateAccessory {
       }
     }
 
+    // On the unit's accessory, or on one of its own (climateOutdoorSeparate,
+    // passed in exactly then): the Home app keeps a service in its
+    // accessory's room (issue #22). Dropped from the unit's accessory when
+    // hidden (climateOutdoorHidden), unsupported or moved.
+    const outdoorHost = outdoorAccessory ?? this.accessory;
+    const unitOutdoor = this.accessory.getServiceById(this.platform.Service.TemperatureSensor, 'outdoor');
+    if (unitOutdoor && (!this._supportsOutdoorTemperature || outdoorAccessory)) {
+      this.accessory.removeService(unitOutdoor);
+    }
+
     if (this._supportsOutdoorTemperature) {
       // Separate service so it doesn't collide with HeaterCooler's
       // CurrentTemperature, which reports the indoor value.
-      const restoredOutdoor = this.accessory.getServiceById(this.platform.Service.TemperatureSensor, 'outdoor');
+      const restoredOutdoor = outdoorHost.getServiceById(this.platform.Service.TemperatureSensor, 'outdoor');
       this.services['OutdoorTemperatureSensor'] = restoredOutdoor
-        || this.accessory.addService(
-          this.platform.Service.TemperatureSensor, this._names.outdoorTemperature, 'outdoor');
-      this.applyDefaultServiceName(this.services['OutdoorTemperatureSensor'], 'outdoorTemperature', !restoredOutdoor);
+        || outdoorHost.addService(this.platform.Service.TemperatureSensor,
+          outdoorAccessory?.displayName ?? this._names.outdoorTemperature, 'outdoor');
+      // On an accessory of its own it is the only tile, named like the
+      // accessory ("<unit> Outdoor Temperature").
+      if (!outdoorAccessory) {
+        this.applyDefaultServiceName(this.services['OutdoorTemperatureSensor'], 'outdoorTemperature', !restoredOutdoor);
+      }
 
       this.services['OutdoorTemperatureSensor']
         .getCharacteristic(this.platform.Characteristic.CurrentTemperature)
@@ -304,16 +309,20 @@ export default class ClimateAccessory {
           minStep: 0.5,
         })
         .onGet(this.getOutdoorTemperature.bind(this));
-    } else {
-      const staleOutdoor = this.accessory.getServiceById(this.platform.Service.TemperatureSensor, 'outdoor');
-      if (staleOutdoor) {
-        this.accessory.removeService(staleOutdoor);
-      }
     }
 
     //////////
     // Update characteristic values asynchronously instead of using onGet handlers
     this.refreshDeviceStatus();
+  }
+
+  private setAccessoryInformation(target: PlatformAccessory, serialNumber: string) {
+    const device = this.accessory.context.device;
+    target.getService(this.platform.Service.AccessoryInformation)
+      ?.setCharacteristic(this.platform.Characteristic.Manufacturer, 'Daikin ' + device?.getDeviceReg())
+      .setCharacteristic(this.platform.Characteristic.Model, device?.getDeviceType() || 'Unknown')
+      .setCharacteristic(this.platform.Characteristic.SerialNumber, serialNumber)
+      .setCharacteristic(this.platform.Characteristic.FirmwareRevision, device?.getFirmwareVersion() || 'Unknown');
   }
 
   // Apply the localized default name to a plugin-created service. On
